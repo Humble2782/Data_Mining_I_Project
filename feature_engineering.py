@@ -3,24 +3,57 @@
 
 import pandas as pd
 
+def process_circumstances(df_circumstances):
+    df_circumstances_copy = df_circumstances.copy()
+
+    # Convert the hour_minute attribute into two separate "hour" and "minute" features.
+    datetime_series = pd.to_datetime(df_circumstances_copy['hour_minute'], format='%H:%M')
+    df_circumstances_copy['hour'] = datetime_series.dt.hour
+    df_circumstances_copy['minute'] = datetime_series.dt.minute
+    df_circumstances_copy.drop(columns='hour_minute', inplace=True)
+    
+    return df_circumstances_copy
+
 
 # --- User Data Transformations ---
-def process_users(df_users, df_circumstances):
+def process_users(df_users, df_year_of_occurence):
     """Processes user data to create new features like role, age, etc."""
     print("  Processing user data...")
     df_users_copy = df_users.copy()
 
+    # User and vehicle ids can have whitespaces in decimal places --> Remove
+    user_remove_whitespace = ['id_user', 'id_vehicle']
+    for column in user_remove_whitespace:
+        df_users_copy[column] = df_users_copy[column].str.replace(r'\s+', '', regex=True)
+        df_users_copy[column] = pd.to_numeric(df_users_copy[column], errors='coerce')
+
     # Map user category to a readable role
     role_map = {1: 'driver', 2: 'passenger', 3: 'pedestrian'}
     df_users_copy['role'] = df_users_copy['user_category'].map(role_map).fillna('other')
-    df_users_copy['is_pedestrian'] = (df_users_copy['role'] == 'pedestrian')
 
     # Create the 'age' feature
-    df_users_copy = df_users_copy.merge(df_circumstances[['id_accident', 'year']], on='id_accident', how='left')
+    df_users_copy = df_users_copy.merge(df_year_of_occurence, on='id_accident', how='left')
     df_users_copy['age'] = (df_users_copy['year'] - df_users_copy['year_of_birth']).astype('Int64')
 
     # Clean up temporary or redundant columns
-    df_users_copy = df_users_copy.drop(columns=['year', 'number_vehicle'])
+    df_users_copy = df_users_copy.drop(columns=['year', 'year_of_birth', 'number_vehicle'])
+
+    # Convert Secu Feature into OneHotEncoding
+    df_users_secure_flags = df_users_copy.copy()
+
+    SECU_FLAG = {
+        1:"used_belt", 2:"used_helmet", 3:"used_child_restraint", 4:"used_reflective_vest",
+        5:"used_airbag", 6:"used_gloves", 7:"used_gloves_and_airbag", 9:"used_other"
+    }
+    SECU_COLS = ["safety_equipment_1","safety_equipment_2","safety_equipment_3"]
+
+    S = df_users_secure_flags[SECU_COLS].apply(pd.to_numeric, errors="coerce")
+
+    for code, name in SECU_FLAG.items():
+        df_users_secure_flags[name] = S.isin([code]).any(axis=1).astype(int)
+
+    df_users_secure_flags = df_users_secure_flags.drop(columns=['safety_equipment_1', 'safety_equipment_2', 'safety_equipment_3'])
+    df_users_copy = df_users_secure_flags
 
     return df_users_copy
 
@@ -31,6 +64,13 @@ def process_vehicles(df_vehicles):
     print("  Processing vehicle data...")
     df_vehicles_copy = df_vehicles.copy()
 
+    # vehicle id can have whitespaces within --> Remove
+    vehicle_remove_whitespace = ['id_vehicle']
+    for column in vehicle_remove_whitespace:
+        df_vehicles_copy[column] = df_vehicles_copy[column].str.replace(r'\s+', '', regex=True)
+        df_vehicles_copy[column] = pd.to_numeric(df_vehicles_copy[column], errors='coerce')
+
+    # Consolidate all the categories into 6 primary ones
     def simplify_catv_6(x):
         if pd.isna(x): return pd.NA
         if x in {1, 80}: return "bicycle"
@@ -92,6 +132,18 @@ def create_vehicle_dummies(df_vehicles):
 def process_locations(df_locations):
     """Selects the most relevant location entry for each accident."""
     print("  Processing location data...")
+
+    df_locations_copy = df_locations.copy()
+
+    # number_of_traffic_lanes can be #VALEURMULTI (MultiValue) --> Artifact from the database export
+    df_locations_copy['number_of_traffic_lanes'] = pd.to_numeric(df_locations_copy['number_of_traffic_lanes'], errors="coerce").fillna(-1)
+
+    # Some Value have whitespaces between decimal places --> Remove
+    location_remove_whitespace = ['nearest_reference_marker', 'nearest_reference_marker_distance']
+    for column in location_remove_whitespace:
+        df_locations_copy[column] = df_locations_copy[column].str.replace(r'\s+', '', regex=True)
+        df_locations_copy[column] = pd.to_numeric(df_locations_copy[column], errors='coerce')
+
     LOC_SCORE_COLS = [
         "road_category", "road_number", "road_number_index", "road_number_letter",
         "traffic_regime", "number_of_traffic_lanes", "reserved_lane_present",
@@ -112,19 +164,18 @@ def process_locations(df_locations):
         s = pd.to_numeric(series, errors="coerce")
         return s.fillna(99)
 
-    L = df_locations.copy()
-    L["__score"] = _completeness_score(L)
-    L["__has_vma"] = L["speed_limit"].notna().astype(int)
-    L["__has_pr"] = L["nearest_reference_marker"].notna().astype(int) | L[
+    df_locations_copy["__score"] = _completeness_score(df_locations_copy)
+    df_locations_copy["__has_vma"] = df_locations_copy["speed_limit"].notna().astype(int)
+    df_locations_copy["__has_pr"] = df_locations_copy["nearest_reference_marker"].notna().astype(int) | df_locations_copy[
         "nearest_reference_marker_distance"].notna().astype(int)
-    L["__road_rank"] = -_major_road_rank(L["road_category"])
+    df_locations_copy["__road_rank"] = -_major_road_rank(df_locations_copy["road_category"])
 
-    L = (L
+    df_locations_copy = (df_locations_copy
          .sort_values(["id_accident", "__score", "__has_vma", "__has_pr", "__road_rank"])
          .drop_duplicates("id_accident", keep="last")
          .drop(columns=["__score", "__has_vma", "__has_pr", "__road_rank"])
          )
-    return L
+    return df_locations_copy
 
 
 # --- Merged Data Transformations ---
@@ -139,7 +190,7 @@ def process_user_vehicle_merge(df_users, df_vehicles):
                         'number_occupants_in_public_transport', 'impact_score']
     vehicle_other_features = [f'{x}_other' for x in vehicle_features]
 
-    mask = df_user_vehicle['is_pedestrian']
+    mask = (df_user_vehicle['role'] == 'pedestrian')
     # For pedestrians, the 'other' vehicle is the one that struck them
     df_user_vehicle.loc[mask, vehicle_other_features] = df_user_vehicle.loc[mask, vehicle_features].to_numpy()
     # Clear the original vehicle columns for pedestrians
