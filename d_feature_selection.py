@@ -1,5 +1,5 @@
-# feature_selection.py
-# Description: Automatically finds engineered data files, selects the final features
+# d_feature_selection.py
+# Description: Automatically finds D_engineered data files, selects the final features
 # by dropping irrelevant columns, and saves the model-ready data.
 
 import pandas as pd
@@ -23,7 +23,7 @@ def drop_irrelevant_columns(df: pd.DataFrame) -> pd.DataFrame:
         'width_central_reservation', 'number_occupants_in_public_transport',
         'id_vehicle_other', 'id_vehicle_other', '_distance',
 
-        # Original columns that have been engineered into new features
+        # Original columns that have been D_engineered into new features
         'year_of_birth', 'age',  # Replaced by 'age_group'
         'day',  # Replaced by 'weekday_sin' and 'weekday_cos'
         'vehicle_category',  # Replaced by 'vehicle_category_simplified' and 'impact_score'
@@ -46,8 +46,8 @@ def run_feature_selection():
     """
     Main function to automatically find and process files.
     """
-    INPUT_FOLDER = 'data/engineered'
-    OUTPUT_FOLDER = 'data/modeling_base'
+    INPUT_FOLDER = 'data/D_engineered'
+    OUTPUT_FOLDER = 'data/E_modeling_base'
 
     # Create the output directory if it doesn't exist
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
@@ -57,7 +57,7 @@ def run_feature_selection():
 
     if not files_to_process:
         print(f"No 'engineered_table_*.csv' files found in '{INPUT_FOLDER}'.")
-        print("Please run feature_engineering.py first.")
+        print("Please run c_feature_engineering.py first.")
         return
 
     print(f"Found {len(files_to_process)} files to process.")

@@ -6,21 +6,21 @@ import re
 
 def get_years():
     """Find all years from the filenames in the data directory."""
-    files = glob.glob('data/original/*-*.csv')
+    files = glob.glob('data/A_original/*-*.csv')
     years = sorted(list(set(re.findall(r'-(\d{4})\.csv', ' '.join(files)))))
     if not years:
-        print("No year-specific data files found in 'data/original/' directory.")
+        print("No year-specific data files found in 'data/A_original/' directory.")
         print("Please ensure files are named like 'lieux-2022.csv'.")
     else:
         print(f"Found data for years: {years}")
     return years
 
 def preprocess_and_save(year, input_name, output_name, column_map):
-    """ 
+    """
     Reads a CSV file, renames the columns, and saves it to a new location.
     """
-    input_path = f'data/original/{input_name}-{year}.csv'
-    output_path = f'data/renamed/{output_name}-{year}.csv'
+    input_path = f'data/A_original/{input_name}-{year}.csv'
+    output_path = f'data/B_renamed/{output_name}-{year}.csv'
 
     try:
         # Using encoding='latin1' for French characters
@@ -37,7 +37,7 @@ def preprocess_and_save(year, input_name, output_name, column_map):
 
 
 if __name__ == "__main__":
-    output_dir = 'data/renamed'
+    output_dir = 'data/B_renamed'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 

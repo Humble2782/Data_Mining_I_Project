@@ -1,4 +1,4 @@
-# feature_engineering.py
+# c_feature_engineering.py
 # Description: Reads a merged table, creates new valuable features, and saves the result.
 # This script ONLY adds columns, it does not remove them.
 
@@ -80,8 +80,8 @@ def create_cyclical_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def run_feature_engineering():
     """Main function to run the entire feature engineering pipeline automatically."""
-    INPUT_FOLDER = 'data/full'
-    OUTPUT_FOLDER = 'data/engineered'
+    INPUT_FOLDER = 'data/C_full'
+    OUTPUT_FOLDER = 'data/D_engineered'
 
     # Create output directory if it doesn't exist
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)

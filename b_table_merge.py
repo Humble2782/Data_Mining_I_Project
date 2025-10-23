@@ -1,4 +1,4 @@
-# table_merge.py
+# b_table_merge.py
 # Description: This script handles all data integration. It reads the raw yearly files,
 # processes them, and merges them into a single, comprehensive table per year.
 
@@ -24,7 +24,7 @@ def process_vehicles(df_vehicles: pd.DataFrame) -> pd.DataFrame:
     """Processes vehicle data by simplifying categories."""
     print("  Processing vehicles table...")
     # This is a placeholder for any vehicle-specific pre-merge processing.
-    # The simplification logic now lives in the main feature_engineering.py,
+    # The simplification logic now lives in the main c_feature_engineering.py,
     # but if any was needed FOR the merge, it would go here.
     return df_vehicles.copy()
 
@@ -116,9 +116,9 @@ def run_table_merge(year: int, input_folder: str, output_folder: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Merge raw accident data files into a single table per year.")
-    parser.add_argument('--input_folder', type=str, default='data/renamed',
+    parser.add_argument('--input_folder', type=str, default='data/B_renamed',
                         help="Folder containing the raw CSV files.")
-    parser.add_argument('--output_folder', type=str, default='data/full',
+    parser.add_argument('--output_folder', type=str, default='data/C_full',
                         help="Folder to save the merged 'full_table' files.")
     args = parser.parse_args()
 
