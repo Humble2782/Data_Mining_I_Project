@@ -21,17 +21,16 @@ def drop_irrelevant_columns(df: pd.DataFrame) -> pd.DataFrame:
 
         # little information and a lot of missing values
         'width_central_reservation', 'number_occupants_in_public_transport',
-        'id_vehicle_other', 'id_vehicle_other', '_distance',
+        'id_vehicle_other', 'nearest_reference_marker_distance', 'nearest_reference_marker',
 
-        # Original columns that have been D_engineered into new features
-        'year_of_birth', 'age',  # Replaced by 'age_group'
-        'day',  # Replaced by 'weekday_sin' and 'weekday_cos'
+        # Original columns that have been engineered into new features
+        'year_of_birth',
+        'day', 'month', 'year'
         'vehicle_category',  # Replaced by 'vehicle_category_simplified' and 'impact_score'
         'safety_equipment_1', 'safety_equipment_2', 'safety_equipment_3',
 
         # Other columns deemed not useful for modeling
-        'trip_purpose', 'pedestrian_location', 'pedestrian_action',
-        'injured_pedestrian_alone', 'role', 'location'
+        'injured_pedestrian_alone', 'trip_purpose'
     ]
 
     # Identify which of the columns to drop actually exist in the DataFrame
@@ -79,7 +78,7 @@ def run_feature_selection():
         output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
         df_final.to_csv(output_path, sep=';', index=False)
-        print(f"Feature selection complete. Final data saved to {output_path}")
+        print(f"Feature selection complete. Final data saved to {output_path} with shape {df_final.shape}.")
 
 
 if __name__ == "__main__":
