@@ -194,18 +194,16 @@ def create_cyclical_features(df: pd.DataFrame) -> pd.DataFrame:
         # We can now drop the temporary columns
         df_copy.drop(columns=['datetime', 'day_of_week', 'day_of_year'], inplace=True)
 
-        print("    -> Successfully created cyclical features for day of week and year.")
-
     else:
-        print("    -> Could not create cyclical features because 'year', 'month', or 'day' column is missing.")
+        print("    ! Could not create cyclical features because 'year', 'month', or 'day' column is missing.")
 
     return df_copy
 
 
 def run_feature_engineering():
     """Main function to run the entire feature engineering pipeline automatically."""
-    INPUT_FOLDER = 'data/C_full'
-    OUTPUT_FOLDER = 'data/D_engineered'
+    INPUT_FOLDER = '../data/C_full'
+    OUTPUT_FOLDER = '../data/D_engineered'
 
     # Create output directory if it doesn't exist
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)

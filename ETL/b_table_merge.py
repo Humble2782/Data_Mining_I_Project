@@ -116,9 +116,9 @@ def run_table_merge(year: int, input_folder: str, output_folder: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Merge raw accident data files into a single table per year.")
-    parser.add_argument('--input_folder', type=str, default='data/B_renamed',
+    parser.add_argument('--input_folder', type=str, default='../data/B_renamed',
                         help="Folder containing the raw CSV files.")
-    parser.add_argument('--output_folder', type=str, default='data/C_full',
+    parser.add_argument('--output_folder', type=str, default='../data/C_full',
                         help="Folder to save the merged 'full_table' files.")
     args = parser.parse_args()
 

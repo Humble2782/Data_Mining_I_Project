@@ -45,8 +45,8 @@ def run_feature_selection():
     """
     Main function to automatically find and process files.
     """
-    INPUT_FOLDER = 'data/D_engineered'
-    OUTPUT_FOLDER = 'data/E_modeling_base'
+    INPUT_FOLDER = '../data/D_engineered'
+    OUTPUT_FOLDER = '../data/E_modeling_base'
 
     # Create the output directory if it doesn't exist
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
