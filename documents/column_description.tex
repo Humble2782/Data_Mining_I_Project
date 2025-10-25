@@ -1,0 +1,442 @@
+% Do not change document class, margins, fonts, etc.
+\documentclass[a4paper,oneside,bibliography=totoc]{scrbook}
+
+% some useful packages (add more as needed)
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{algorithm} % you can modify the algorithm style to your liking
+\counterwithin{algorithm}{chapter} % so that algorithms have chapter numbers as well
+\usepackage{algorithmic}
+\usepackage{csquotes}
+\renewcommand{\algorithmiccomment}[1]{\hfill\textit{// #1}}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[colorlinks,citecolor=Green]{hyperref} % you may change/remove the colors
+\usepackage{lipsum} % you do not need this
+
+% chicago citation style
+\usepackage{natbib}
+\bibliographystyle{chicagoa}
+\setcitestyle{authoryear,round,semicolon,aysep={},yysep={,}} \let\cite\citep
+
+% example enviroments (add more as needed)
+\newtheorem{definition}{Definition} \newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+
+% Quick fix to remove the 0 in front of sections.
+\makeatletter
+\renewcommand\thesection{\arabic{section}}
+\renewcommand\thesubsection{\arabic{section}.\arabic{subsection}}
+\renewcommand\thesubsubsection{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+\makeatother
+
+
+
+\frontmatter \subject{Predicting Injury Severity in Road Accidents: A Real-Time Classification Approach} % change to appropriate type
+\title{Column Description and Feature Engineering}
+\author{
+  David Cebulla (1922129)\\
+  Gabriel Himmelein (1649181)\\
+  Lukas Ott (1842341)\\
+  Artur Loreit (2268917)\\
+  Aaron Niemesch (1836924)
+} \date{October 25, 2025}
+\publishers{{\small Submitted to}\\
+  Data and Web Science Group\\
+  Dr.\ Sven Hertling\\
+  University of Mannheim\\}
+\maketitle
+
+
+% none of the things below is needed, but you may add them if you feel that they
+% are helpful for your work \listofalgorithms \listoffigures \listoftables
+% \listtheorems{definition} \listtheorems{proposition}
+
+
+% okay, start new numbering ... here is where it really starts
+\mainmatter
+\section{General}
+
+The columns can be divided into two main groups:
+\begin{enumerate}
+    \item \textbf{Original Columns:} Data originating from the original French datasets and translated into English by \texttt{a\_rename.py}.
+    \item \textbf{Engineered Features:} New columns calculated and added in \texttt{c\_feature\_engineering.py} to enrich the dataset.
+\end{enumerate}
+
+\section{Original Columns}
+These columns describe the core information about the accident, location, vehicles, and users.
+
+\subsection{General Accident Characteristics}
+\begin{itemize}
+    \item \textbf{\texttt{year}}: Year of the accident. \textit{(Original: \texttt{an})}
+    \item \textbf{\texttt{hour\_minute}}: Exact hour and minute of the accident. \textit{(Original: \texttt{hrmn})}
+    \item \textbf{\texttt{lighting\_condition}}: Lighting conditions under which the accident occurred. \textit{(Original: \texttt{lum})}
+        \begin{itemize}
+            \item \texttt{1}: Full day
+            \item \texttt{2}: Twilight or dawn
+            \item \texttt{3}: Night without public lighting
+            \item \texttt{4}: Night with public lighting not on
+            \item \texttt{5}: Night with public lighting on
+        \end{itemize}
+    \item \textbf{\texttt{location}}: Location of the accident. \textit{(Original: \texttt{agg})}
+        \begin{itemize}
+            \item \texttt{1}: Outside built-up area
+            \item \texttt{2}: In built-up area
+        \end{itemize}
+    \item \textbf{\texttt{intersection}}: Type of intersection. \textit{(Original: \texttt{int})}
+        \begin{itemize}
+            \item \texttt{1}: Outside intersection
+            \item \texttt{2}: X-intersection
+            \item \texttt{3}: T-intersection
+            \item \texttt{4}: Y-intersection
+            \item \texttt{5}: Intersection with >4 branches
+            \item \texttt{6}: Roundabout
+            \item \texttt{7}: Place / Square
+            \item \texttt{8}: Level crossing
+            \item \texttt{9}: Other intersection
+        \end{itemize}
+    \item \textbf{\texttt{weather\_condition}}: Atmospheric conditions. \textit{(Original: \texttt{atm})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{1}: Normal
+            \item \texttt{2}: Light rain
+            \item \texttt{3}: Heavy rain
+            \item \texttt{4}: Snow - hail
+            \item \texttt{5}: Fog - smoke
+            \item \texttt{6}: Strong wind - storm
+            \item \texttt{7}: Dazzling weather
+            \item \texttt{8}: Overcast
+            \item \texttt{9}: Other
+        \end{itemize}
+    \item \textbf{\texttt{type\_of\_collision}}: Type of collision. \textit{(Original: \texttt{col})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{1}: Two vehicles - frontal
+            \item \texttt{2}: Two vehicles - from behind
+            \item \texttt{3}: Two vehicles - from the side
+            \item \texttt{4}: Three vehicles and more - in chain
+            \item \texttt{5}: Three vehicles and more - multiple collisions
+            \item \texttt{6}: Other collision
+            \item \texttt{7}: Without collision
+        \end{itemize}
+    \item \textbf{\texttt{latitude}}: Latitude (WGS84). \textit{(Original: \texttt{lat})}
+    \item \textbf{\texttt{longitude}}: Longitude (WGS84). \textit{(Original: \texttt{long})}
+\end{itemize}
+
+\subsection{Location Characteristics}
+\begin{itemize}
+    \item \textbf{\texttt{road\_category}}: Category of the road. \textit{(Original: \texttt{catr})}
+        \begin{itemize}
+            \item \texttt{1}: Motorway
+            \item \texttt{2}: National Road
+            \item \texttt{3}: Departmental Road
+            \item \texttt{4}: Communal Way
+            \item \texttt{5}: Off public network
+            \item \texttt{6}: Public parking lot
+            \item \texttt{7}: Urban metropolis roads
+            \item \texttt{9}: Other
+        \end{itemize}
+    \item \textbf{\texttt{traffic\_regime}}: Traffic regime. \textit{(Original: \texttt{circ})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{1}: One-way
+            \item \texttt{2}: Two-way
+            \item \texttt{3}: Separated carriageways
+            \item \texttt{4}: With variable assignment lanes
+        \end{itemize}
+    \item \textbf{\texttt{number\_of\_traffic\_lanes}}: Total number of traffic lanes. \textit{(Original: \texttt{nbv})}
+    \item \textbf{\texttt{reserved\_lane\_present}}: Indicates the existence of a reserved lane. \textit{(Original: \texttt{vosp})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Not applicable
+            \item \texttt{1}: Bicycle path
+            \item \texttt{2}: Bicycle lane
+            \item \texttt{3}: Reserved lane
+        \end{itemize}
+    \item \textbf{\texttt{longitudinal\_profile}}: Longitudinal profile (slope) of the road. \textit{(Original: \texttt{prof})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{1}: Flat
+            \item \texttt{2}: Slope
+            \item \texttt{3}: Top of hill
+            \item \texttt{4}: Bottom of hill
+        \end{itemize}
+    \item \textbf{\texttt{horizontal\_alignment}}: Horizontal alignment (plan) of the road. \textit{(Original: \texttt{plan})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{1}: Straight section
+            \item \texttt{2}: Left curve
+            \item \texttt{3}: Right curve
+            \item \texttt{4}: In "S" shape
+        \end{itemize}
+    \item \textbf{\texttt{carriageway\_width}}: Width of the carriageway (in meters), excluding central reservations or parking. \textit{(Original: \texttt{larrout})}
+    \item \textbf{\texttt{pavement\_condition}}: Condition of the road surface. \textit{(Original: \texttt{surf})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{1}: Normal
+            \item \texttt{2}: Wet
+            \item \texttt{3}: Puddles
+            \item \texttt{4}: Flooded
+            \item \texttt{5}: Snowy
+            \item \texttt{6}: Mud
+            \item \texttt{7}: Icy
+            \item \texttt{8}: Grease - oil
+            \item \texttt{9}: Other
+        \end{itemize}
+    \item \textbf{\texttt{infrastructure}}: Special infrastructure or facilities at the accident site. \textit{(Original: \texttt{infra})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: None
+            \item \texttt{1}: Underground - tunnel
+            \item \texttt{2}: Bridge - overpass
+            \item \texttt{3}: Interchange ramp or connection
+            \item \texttt{4}: Railway
+            \item \texttt{5}: Equipped junction
+            \item \texttt{6}: Pedestrian zone
+            \item \texttt{7}: Toll zone
+            \item \texttt{8}: Construction site
+            \item \texttt{9}: Others
+        \end{itemize}
+    \item \textbf{\texttt{accident\_situation}}: Situation of the accident. \textit{(Original: \texttt{situ})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: None
+            \item \texttt{1}: On roadway
+            \item \texttt{2}: On emergency lane
+            \item \texttt{3}: On shoulder
+            \item \texttt{4}: On sidewalk
+            \item \texttt{5}: On bicycle path
+            \item \texttt{6}: On other special lane
+            \item \texttt{8}: Others
+        \end{itemize}
+    \item \textbf{\texttt{speed\_limit}}: Authorized speed limit at the time and place of the accident. \textit{(Original: \texttt{vma})}
+\end{itemize}
+
+\subsection{User Characteristics (Occupants/Pedestrians)}
+\begin{itemize}
+    \item \textbf{\texttt{position}}: Position occupied by the user in the vehicle (e.g., \texttt{1}: Driver, \texttt{2}-\texttt{9}: Passenger seats). \textit{(Original: \texttt{place})}
+    \item \textbf{\texttt{user\_category}}: Category of the user. \textit{(Original: \texttt{catu})}
+        \begin{itemize}
+            \item \texttt{1}: Driver
+            \item \texttt{2}: Passenger
+            \item \texttt{3}: Pedestrian
+        \end{itemize}
+     \item \textbf{\texttt{role}}: User's role, derived from \texttt{user\_category}. \textit{(Created in \texttt{b\_table\_merge.py})}
+        \begin{itemize}
+            \item \texttt{'driver'}: (From \texttt{user\_category} = 1)
+            \item \texttt{'passenger'}: (From \texttt{user\_category} = 2)
+            \item \texttt{'pedestrian'}: (From \texttt{user\_category} = 3)
+            \item \texttt{'other'}: (For any other or null value)
+        \end{itemize}
+    \item \textbf{\texttt{injury\_severity}}: Severity of the user's injury. \textit{(Original: \texttt{grav})}
+        \begin{itemize}
+            \item \texttt{1}: Uninjured
+            \item \texttt{2}: Killed
+            \item \texttt{3}: Hospitalized injured
+            \item \texttt{4}: Lightly injured
+        \end{itemize}
+    \item \textbf{\texttt{sex}}: Sex of the user. \textit{(Original: \texttt{sexe})}
+        \begin{itemize}
+            \item \texttt{1}: Male
+            \item \texttt{2}: Female
+        \end{itemize}
+    \item \textbf{\texttt{pedestrian\_location}}: Location of the pedestrian at the time of the accident. \textit{(Original: \texttt{locp})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Not applicable
+            \item \texttt{1}: On roadway, >50m from pedestrian crossing
+            \item \texttt{2}: On roadway, <50m from pedestrian crossing
+            \item \texttt{3}: On pedestrian crossing, without traffic light
+            \item \texttt{4}: On pedestrian crossing, with traffic light
+            \item \texttt{5}: On sidewalk
+            \item \texttt{6}: On shoulder
+            \item \texttt{7}: On refuge or emergency lane
+            \item \texttt{8}: On parallel lane
+            \item \texttt{9}: Unknown
+        \end{itemize}
+    \item \textbf{\texttt{pedestrian\_action}}: Action of the pedestrian. \textit{(Original: \texttt{actp})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Not specified or not applicable
+            \item \texttt{1}: Moving in the same direction as the striking vehicle
+            \item \texttt{2}: Moving in the opposite direction of the vehicle
+            \item \texttt{3}: Crossing
+            \item \texttt{4}: Masked / Hidden
+            \item \texttt{5}: Playing - running
+            \item \texttt{6}: With animal
+            \item \texttt{9}: Other
+            \item \texttt{A}: Getting on/off vehicle
+            \item \texttt{B}: Unknown
+        \end{itemize}
+\end{itemize}
+
+\subsection{Vehicle Characteristics}
+\begin{itemize}
+    \item \textbf{\texttt{number\_vehicle\_x}} / \textbf{\texttt{number\_vehicle\_y}}: Vehicle identification number within the accident (e.g., A01, B01). \textit{(Original: \texttt{num\_veh})}. The \texttt{\_x} and \texttt{\_y} suffixes typically result from merging tables.
+    \item \textbf{\texttt{direction\_of\_travel}}: Direction of travel. \textit{(Original: \texttt{senc})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Unknown
+            \item \texttt{1}: Increasing PK/PR or postal address number
+            \item \texttt{2}: Decreasing PK/PR or postal address number
+            \item \texttt{3}: No landmark
+        \end{itemize}
+    \item \textbf{\texttt{vehicle\_category}}: Detailed vehicle category. \textit{(Original: \texttt{catv})}
+        \begin{itemize}
+            \item \texttt{00}: Indeterminable
+            \item \texttt{01}: Bicycle
+            \item \texttt{02}: Moped <50cm3
+            \item \texttt{03}: Light quadricycle (car-bodied)
+            \item \texttt{04}: Unused reference since 2006 (registered scooter)
+            \item \texttt{05}: Unused reference since 2006 (motorcycle)
+            \item \texttt{06}: Unused reference since 2006 (side-car)
+            \item \texttt{07}: Light vehicle alone
+            \item \texttt{08}: Unused reference since 2006 (LV + caravan)
+            \item \texttt{09}: Unused reference since 2006 (LV + trailer)
+            \item \texttt{10}: Utility vehicle (1.5T <= GVW <= 3.5T)
+            \item \texttt{11}: Unused reference since 2006 (UV (10) + caravan)
+            \item \texttt{12}: Unused reference since 2006 (UV (10) + trailer)
+            \item \texttt{13}: HGV alone (3.5T < GVW <= 7.5T)
+            \item \texttt{14}: HGV alone > 7.5T
+            \item \texttt{15}: HGV > 3.5T + trailer
+            \item \texttt{16}: Road tractor alone
+            \item \texttt{17}: Road tractor + semi-trailer
+            \item \texttt{18}: Unused reference since 2006 (public transport)
+            \item \texttt{19}: Unused reference since 2006 (tramway)
+            \item \texttt{20}: Special machine
+            \item \texttt{21}: Agricultural tractor
+            \item \texttt{30}: Scooter < 50 cm3
+            \item \texttt{31}: Motorcycle > 50 cm3 and <= 125 cm3
+            \item \texttt{32}: Scooter > 50 cm3 and <= 125 cm3
+            \item \texttt{33}: Motorcycle > 125 cm3
+            \item \texttt{34}: Scooter > 125 cm3
+            \item \texttt{35}: Light quad <= 50 cm3 (non-car-bodied)
+            \item \texttt{36}: Heavy quad > 50 cm3 (non-car-bodied)
+            \item \texttt{37}: Bus
+            \item \texttt{38}: Coach
+            \item \texttt{39}: Train
+            \item \texttt{40}: Tramway
+            \item \texttt{41}: 3-wheeler <= 50 cm3
+            \item \texttt{42}: 3-wheeler 50 cm3 <= 125 cm3
+            \item \texttt{43}: 3-wheeler > 125 cm3
+            \item \texttt{50}: Motorized personal mobility device
+            \item \texttt{60}: Non-motorized personal mobility device
+            \item \texttt{80}: E-bike
+            \item \texttt{99}: Other vehicle
+        \end{itemize}
+    \item \textbf{\texttt{fixed\_obstacle\_struck}}: Fixed obstacle struck. \textit{(Original: \texttt{obs})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Not applicable
+            \item \texttt{1}: Parked vehicle
+            \item \texttt{2}: Tree
+            \item \texttt{3}: Metal guard rail
+            \item \texttt{4}: Concrete guard rail
+            \item \texttt{5}: Other guard rail
+            \item \texttt{6}: Building, wall, bridge pier
+            \item \texttt{7}: Road sign support or emergency call box
+            \item \texttt{8}: Post
+            \item \texttt{9}: Street furniture
+            \item \texttt{10}: Parapet
+            \item \texttt{11}: Island, refuge, high bollard
+            \item \texttt{12}: Curb
+            \item \texttt{13}: Ditch, embankment, rock wall
+            \item \texttt{14}: Other fixed obstacle on roadway
+            \item \texttt{15}: Other fixed obstacle on sidewalk or shoulder
+            \item \texttt{16}: Road exit without obstacle
+            \item \texttt{17}: Culvert
+        \end{itemize}
+    \item \textbf{\texttt{mobile\_obstacle\_struck}}: Mobile obstacle struck. \textit{(Original: \texttt{obsm})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: None
+            \item \texttt{1}: Pedestrian
+            \item \texttt{2}: Vehicle
+            \item \texttt{4}: Vehicle on rail
+            \item \texttt{5}: Domestic animal
+            \item \texttt{6}: Wild animal
+            \item \texttt{9}: Other
+        \end{itemize}
+    \item \textbf{\texttt{initial\_point\_of\_impact}}: Initial point of impact on the vehicle. \textit{(Original: \texttt{choc})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: None
+            \item \texttt{1}: Front
+            \item \texttt{2}: Front right
+            \item \texttt{3}: Front left
+            \item \texttt{4}: Rear
+            \item \texttt{5}: Rear right
+            \item \texttt{6}: Rear left
+            \item \texttt{7}: Right side
+            \item \texttt{8}: Left side
+            \item \texttt{9}: Multiple impacts (rollover)
+        \end{itemize}
+        \textit{Note: The source document contained warnings indicating that typo values (\texttt{44} for profile, \texttt{44} for pavement, \texttt{11} for mobile obstacle) might exist in older data. The correct values are used here.}
+
+    \item \textbf{\texttt{main\_maneuver\_before\_accident}}: Main maneuver before the accident. \textit{(Original: \texttt{manv})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Unknown
+            \item \texttt{1}: Without change of direction
+            \item \texttt{2}: Same direction, same lane
+            \item \texttt{3}: Between 2 lanes
+            \item \texttt{4}: Reversing
+            \item \texttt{5}: Wrong way
+            \item \texttt{6}: Crossing central reservation
+            \item \texttt{7}: In bus lane, same direction
+            \item \texttt{8}: In bus lane, opposite direction
+            \item \texttt{9}: Merging
+            \item \texttt{10}: Making a U-turn on the roadway
+            \item \texttt{11}: Changing lane: Left
+            \item \texttt{12}: Changing lane: Right
+            \item \texttt{13}: Veering: Left
+            \item \texttt{14}: Veering: Right
+            \item \texttt{15}: Turning: Left
+            \item \texttt{16}: Turning: Right
+            \item \texttt{17}: Overtaking: Left
+            \item \texttt{18}: Overtaking: Right
+            \item \texttt{19}: Crossing the roadway
+            \item \texttt{20}: Parking maneuver
+            \item \texttt{21}: Evasive maneuver
+            \item \texttt{22}: Opening door
+            \item \texttt{23}: Stopped (not parked)
+            \item \texttt{24}: Parked (with occupants)
+            \item \texttt{25}: Driving on sidewalk
+            \item \texttt{26}: Other maneuvers
+        \end{itemize}
+    \item \textbf{\texttt{motor\_type}}: Type of vehicle motorization. \textit{(Original: \texttt{motor})}
+        \begin{itemize}
+            \item \texttt{-1}: Not specified
+            \item \texttt{0}: Unknown
+            \item \texttt{1}: Hydrocarbon (Gasoline/Diesel)
+            \item \texttt{2}: Hybrid electric
+            \item \texttt{3}: Electric
+            \item \texttt{4}: Hydrogen
+            \item \texttt{5}: Human (e.g., bicycle)
+            \item \texttt{6}: Other
+        \end{itemize}
+\end{itemize}
+
+\section{Engineered Features (From c\_feature\_engineering.py)}
+These columns were newly created to model more complex relationships.
+\begin{itemize}
+    \item \textbf{\texttt{vehicle\_category\_simplified}}: A simplified grouping of the detailed \texttt{vehicle\_category}. Possible values: \texttt{bicycle}, \texttt{powered\_2\_3\_wheeler}, \texttt{light\_motor\_vehicle}, \texttt{hgv\_truck}, \texttt{bus\_coach}, \texttt{other}, \texttt{unknown}.
+    \item \textbf{\texttt{impact\_score}}: A calculated "impact score" (weight) based on the \texttt{vehicle\_category\_simplified} (e.g., \texttt{hgv\_truck}: 6, \texttt{light\_motor\_vehicle}: 4, \texttt{bicycle}: 2).
+    \item \textbf{\texttt{age}}: The user's age at the time of the accident, calculated as \texttt{year} - \texttt{year\_of\_birth}.
+    \item \textbf{\texttt{age\_group}}: An age bracket based on the \texttt{age}: \texttt{child\_teen} (0-17), \texttt{young\_adult} (18-24), \texttt{adult} (25-39), \texttt{middle\_aged} (40-64), \texttt{senior} (65+).
+    \item \textbf{\texttt{used\_belt}}: A binary indicator (1 or 0) specifying if the user used a seatbelt (based on \texttt{safety\_equipment\_1}, \texttt{\_2}, \texttt{\_3} columns, where the value \texttt{1} means "Belt").
+    \item \textbf{\texttt{used\_helmet}}: A binary indicator (1 or 0) specifying if the user used a helmet (based on \texttt{safety\_equipment\_1}, \texttt{\_2}, \texttt{\_3} columns, where the value \texttt{2} means "Helmet").
+    \item \textbf{\texttt{day\_of\_week\_sin}} / \textbf{\texttt{day\_of\_week\_cos}}: Cyclical features (Sine/Cosine) representing the day of the week to model weekly seasonality.
+    \item \textbf{\texttt{month\_sin}} / \textbf{\texttt{month\_cos}}: Cyclical features (Sine/Cosine) representing the month to model annual seasonality.
+    \item \textbf{\texttt{day\_of\_year\_sin}} / \textbf{\texttt{day\_of\_year\_cos}}: Cyclical features (Sine/Cosine) representing the day of the year (more granular annual seasonality).
+    \item \textbf{\texttt{road\_complexity\_index}}: An index (scaled from 0-10) that assesses the complexity of the road. It is based on a weighted sum of \texttt{intersection}, \texttt{road\_category}, \texttt{traffic\_regime}, and \texttt{number\_of\_traffic\_lanes}.
+    \item \textbf{\texttt{surface\_quality\_indicator}}: A binary indicator (\texttt{1}=good, \texttt{0}=bad). It is only \texttt{1} (good) if the \texttt{pavement\_condition} is "Normal" (1) AND the \texttt{longitudinal\_profile} is "Flat" (1).
+\end{itemize}
+
+\end{document}
