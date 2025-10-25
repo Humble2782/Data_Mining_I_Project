@@ -88,27 +88,23 @@ def run_table_merge(year: int, input_folder: str, output_folder: str):
         print(f"  Skipping year {year} due to missing file: {e}")
         return
 
-    # --- 1. Process individual tables before merging ---
+    # --- Process individual tables before merging ---
     processed_users = process_users(df_users)
     processed_vehicles = process_vehicles(df_vehicles)
     selected_locations = process_locations(df_locations)
 
-    # --- 2. Create aggregated features for the main merge ---
-    vehicle_dummies = create_vehicle_dummies(processed_vehicles)
-
-    # --- 3. Merge user and vehicle data together ---
+    # --- Merge user and vehicle data together ---
     df_user_vehicle = process_user_vehicle_merge(processed_users, processed_vehicles)
 
-    # --- 4. Final Merge ---
+    # --- Final Merge ---
     # Merge all processed parts into the final table
     final_table = (
         df_circumstances
         .merge(selected_locations, on='id_accident', how='left')
         .merge(df_user_vehicle, on='id_accident', how='left')
-        .merge(vehicle_dummies, on='id_accident', how='left')
     )
 
-    # --- 5. Save the result ---
+    # --- Save the result ---
     output_filename = f'{output_folder}/full_table_{year}.csv'
     final_table.to_csv(output_filename, sep=';', index=False)
     print(f"Successfully saved merged data for year {year} to {output_filename}")
