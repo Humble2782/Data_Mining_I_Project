@@ -25,8 +25,7 @@ def drop_irrelevant_columns(df: pd.DataFrame) -> pd.DataFrame:
 
         # Original columns that have been engineered into new features
         'year_of_birth',
-        'day', 'month', 'year'
-        'vehicle_category',  # Replaced by 'vehicle_category_simplified' and 'impact_score'
+        'day', 'month', 'year',
         'safety_equipment_1', 'safety_equipment_2', 'safety_equipment_3',
 
         # Other columns deemed not useful for modeling
