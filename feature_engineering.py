@@ -27,10 +27,6 @@ def process_users(df_users, df_year_of_occurence):
         df_users_copy[column] = df_users_copy[column].str.replace(r'\s+', '', regex=True)
         df_users_copy[column] = pd.to_numeric(df_users_copy[column], errors='coerce')
 
-    # Map user category to a readable role
-    role_map = {1: 'driver', 2: 'passenger', 3: 'pedestrian'}
-    df_users_copy['role'] = df_users_copy['user_category'].map(role_map).fillna('other')
-
     # Create the 'age' feature
     df_users_copy = df_users_copy.merge(df_year_of_occurence, on='id_accident', how='left')
     df_users_copy['age'] = (df_users_copy['year'] - df_users_copy['year_of_birth']).astype('Int64')
@@ -52,9 +48,15 @@ def process_users(df_users, df_year_of_occurence):
     for code, name in SECU_FLAG.items():
         df_users_secure_flags[name] = S.isin([code]).any(axis=1).astype(int)
 
-    df_users_secure_flags = df_users_secure_flags.drop(columns=['safety_equipment_1', 'safety_equipment_2', 'safety_equipment_3'])
-    df_users_copy = df_users_secure_flags
+    # Merge Airbag and Airbag + Gloves
+    df_users_secure_flags['used_airbag'] = df_users_secure_flags[['used_airbag', 'used_gloves_and_airbag']].any(axis=1).astype(int)
+    df_users_secure_flags['used_gloves'] = df_users_secure_flags[['used_gloves', 'used_gloves_and_airbag']].any(axis=1).astype(int)
 
+    # Remove columns not needed anymore
+    df_users_secure_flags.drop(columns=['used_gloves_and_airbag', 'safety_equipment_1', 'safety_equipment_2', 'safety_equipment_3'], inplace=True)
+
+    df_users_copy = df_users_secure_flags
+    
     return df_users_copy
 
 
@@ -101,30 +103,37 @@ def process_vehicles(df_vehicles):
     }
 
     V = apply_na_codes(df_vehicles_copy)
+
     V["vehicle_category"] = V["vehicle_category"].apply(simplify_catv_6)
     V["impact_score"] = V["vehicle_category"].map(CAT6_WEIGHT).fillna(1)
-    V.sort_values(by=['id_accident', 'impact_score'], ascending=[True, False], inplace=True)
+
+    V.sort_values(by=['id_accident', 'impact_score'], ascending=[True, False])
+
 
     one_entry = V.groupby('id_accident').filter(lambda x: len(x) == 1)
+
     for x in one_entry.columns:
-        if x != 'id_accident':
-            one_entry[f'{x}_other'] = pd.NA
+        one_entry[f'{x}_other'] = pd.NA
+    one_entry = one_entry.drop(columns='id_accident_other')
 
-    V_merged = (
+    V = (
         V.merge(V, on='id_accident', how='left', suffixes=['', '_other'])
-        .query('id_vehicle != id_vehicle_other')
+            .query('id_vehicle != id_vehicle_other')
     )
-    V_merged = V_merged.sort_values(by=['id_accident', 'id_vehicle', 'impact_score_other']).drop_duplicates(
-        subset=['id_accident', 'id_vehicle'], keep='last')
 
-    return pd.concat([one_entry, V_merged]).sort_index()
+    V = V.sort_values(by=['id_accident', 'id_vehicle', 'impact_score_other']).drop_duplicates(subset=['id_accident', 'id_vehicle'], keep='last')
+
+    V.drop(columns=['impact_score', 'impact_score_other'], inplace=True)
+    one_entry.drop(columns=['impact_score', 'impact_score_other'], inplace=True)
+
+    return pd.concat([one_entry, V]).sort_index()
 
 
 def create_vehicle_dummies(df_vehicles):
     """Creates dummy variables for vehicle categories involved in each accident."""
     print("  Creating vehicle category dummies...")
     g = df_vehicles[['id_accident', 'vehicle_category']].copy()
-    tmp = pd.get_dummies(g, columns=['vehicle_category'], prefix='vehicle_category')
+    tmp = pd.get_dummies(g, columns=['vehicle_category'], prefix='vehicle_category_involved')
     return tmp.groupby('id_accident').sum()
 
 
@@ -184,15 +193,12 @@ def process_user_vehicle_merge(df_users, df_vehicles):
     print("  Merging user and vehicle data...")
     df_user_vehicle = df_users.merge(df_vehicles, on=['id_accident', 'id_vehicle'], how='left')
 
-    vehicle_features = ['id_vehicle', 'number_vehicle', 'direction_of_travel', 'vehicle_category',
-                        'fixed_obstacle_struck', 'mobile_obstacle_struck', 'initial_point_of_impact',
-                        'main_maneuver_before_accident', 'motor_type',
-                        'number_occupants_in_public_transport', 'impact_score']
-    vehicle_other_features = [f'{x}_other' for x in vehicle_features]
+    vehicle_features = ['id_vehicle', 'number_vehicle', 'direction_of_travel', 'vehicle_category', 'fixed_obstacle_struck', 'mobile_obstacle_struck', 'initial_point_of_impact', 'main_maneuver_before_accident', 'motor_type', 'number_occupants_in_public_transport']
+    vehicle_other = [f'{x}_other' for x in vehicle_features]
 
-    mask = (df_user_vehicle['role'] == 'pedestrian')
+    mask = (df_user_vehicle['user_category'] == 3) # Is a pedestrian
     # For pedestrians, the 'other' vehicle is the one that struck them
-    df_user_vehicle.loc[mask, vehicle_other_features] = df_user_vehicle.loc[mask, vehicle_features].to_numpy()
+    df_user_vehicle.loc[mask, vehicle_other] = df_user_vehicle.loc[mask, vehicle_features].to_numpy()
     # Clear the original vehicle columns for pedestrians
     df_user_vehicle.loc[mask, vehicle_features] = pd.NA
 

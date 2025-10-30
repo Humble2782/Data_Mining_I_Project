@@ -95,7 +95,8 @@ def process_year(df_circumstances, df_locations, df_users, df_vehicles):
     df_users = df_users.rename(columns=users_column_names)
     
     # --- Call processing functions from feature_engineering.py ---
-    processed_users = fe.process_users(df_users, df_circumstances[['id_accident', 'year']])
+    processed_circumstances = fe.process_circumstances(df_circumstances)
+    processed_users = fe.process_users(df_users, processed_circumstances[['id_accident', 'year']])
     processed_vehicles = fe.process_vehicles(df_vehicles)
     selected_locations = fe.process_locations(df_locations)
 
@@ -105,12 +106,32 @@ def process_year(df_circumstances, df_locations, df_users, df_vehicles):
 
     # --- Final merge ---
     final_table = (
-        df_circumstances
+        processed_circumstances
         .copy()
         .merge(selected_locations, on='id_accident', how='left')
         .merge(df_user_vehicle, on='id_accident', how='left')
         .merge(vehicle_categories_involved, on='id_accident', how='left')
     )
+
+    columns_to_drop = [
+        # IDs
+        'id_accident', 'id_vehicle', 'id_user', 'number_vehicle', 'department_code', 'id_vehicle_other',
+        # Unique codes
+        'commune_code', 'postal_address', 'road_number', 'road_number_index',
+        'road_number_letter', 'number_vehicle_other',
+
+        # little information and a lot of missing values
+        'width_central_reservation', 'number_occupants_in_public_transport', 'number_occupants_in_public_transport_other',
+        'nearest_reference_marker_distance', 'nearest_reference_marker',
+
+        # Other columns deemed not useful for modeling
+        'injured_pedestrian_alone', 'carriageway_width', 'trip_purpose', 'year',
+
+        # Drop unrealistic secu equipment
+        'used_other', 'used_gloves', 'used_reflective_vest' 
+    ]
+    
+    final_table.drop(columns=columns_to_drop, inplace=True)
 
     return final_table
 
