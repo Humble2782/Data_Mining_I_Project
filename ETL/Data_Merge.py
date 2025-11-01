@@ -8,11 +8,10 @@ from pathlib import Path
 from typing import TypedDict
 
 # Import the new processing functions
-import a_rename as na
-import b_merge_tables as me
-import c_feature_engineering as fe
-import d_feature_selection as fs
-
+import helpers.a_rename as na
+import helpers.b_merge_tables as me
+import helpers.c_feature_engineering as fe
+import helpers.d_feature_selection as fs
 
 # Typing
 class AccidentDataRenamed(TypedDict):
@@ -20,7 +19,6 @@ class AccidentDataRenamed(TypedDict):
     locations: pd.DataFrame
     vehicles: pd.DataFrame
     users: pd.DataFrame
-
 
 class AccidentPreprocessingResult(TypedDict):
     renamed: AccidentDataRenamed
@@ -81,7 +79,9 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
 
 
 def process_files(input_path: str, output_path: str = 'data'):
-    files_path = glob.glob('data/original/*-*.csv')
+    input_path: Path = Path(input_path)
+
+    files_path = glob.glob(f'{input_path}/*-*.csv')
     years = sorted(list(set(re.findall(r'-(\d{4})\.csv', ' '.join(files_path)))))
 
     if not years:
@@ -138,8 +138,8 @@ def process_files(input_path: str, output_path: str = 'data'):
             except PermissionError:
                 print(f'Insufficient permissions to access {output_path} or one of its subpaths. Aborting.')
                 return
-            except Exception as e:
-                print(f'An unexpected Exception occured: {e}')
+            #except Exception as e:
+             #   print(f'An unexpected Exception occured: {e}')
 
 
 if __name__ == "__main__":
