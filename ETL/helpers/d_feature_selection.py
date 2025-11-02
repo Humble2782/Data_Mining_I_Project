@@ -23,4 +23,5 @@ columns_to_drop = [
 
 
 def select_features(df_table: pd.DataFrame):
-    return df_table.drop(columns=columns_to_drop)
+    columns_to_drop_in_df = df_table.columns.intersection(columns_to_drop)
+    return df_table.drop(columns=columns_to_drop_in_df)

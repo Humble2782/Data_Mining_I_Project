@@ -41,7 +41,7 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
 
     # --- Call processing functions from feature_engineering.py ---
     df_circumstances_processed = df_circumstances_renamed
-    df_users_processed = me.process_users(df_users_renamed, df_circumstances_renamed[['id_accident', 'year']])
+    df_users_processed = me.process_users(df_users_renamed)
     df_vehicles_processed = me.process_vehicles(df_vehicles_renamed)
     df_locations_processed = me.process_locations(df_locations_renamed)
 
