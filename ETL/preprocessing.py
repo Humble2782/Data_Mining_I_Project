@@ -68,6 +68,7 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
     feature_engineering_table = fe.create_vehicle_features(feature_engineering_table)
     feature_engineering_table = fe.create_road_complexity_index(feature_engineering_table)
     feature_engineering_table = fe.create_surface_quality_indicator(feature_engineering_table)
+    feature_engineering_table = fe.create_ordinal_target(feature_engineering_table)
     print("Feature Engineering complete.")
 
     # --- Feature Selection ---

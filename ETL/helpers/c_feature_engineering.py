@@ -212,3 +212,29 @@ def create_surface_quality_indicator(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_copy
 
+def create_ordinal_target(df_merged: pd.DataFrame) -> pd.DataFrame:
+    """
+    Creates the new ordinal target variable 'injury_target' based on
+    the 3-class system requested:
+    - 0: Uninjured (Original: 1)
+    - 1: Lightly Injured (Original: 4)
+    - 2: Severe (Hospitalized or Killed) (Original: 2, 3)
+    """
+    print("  Creating new ordinal target 'injury_target' (0, 1, 2)...")
+    df_copy = df_merged.copy()
+
+    # Define the mapping for the 3-class ordinal target
+    ordinal_map = {
+        1: 0,  # Uninjured
+        4: 1,  # Lightly Injured
+        3: 2,  # Hospitalized
+        2: 2  # Killed
+    }
+
+    df_copy['injury_target'] = df_copy['injury_severity'].map(ordinal_map)
+
+    # Note: The original 'injury_severity' column will be
+    # dropped in the d_feature_selection step.
+
+    return df_copy
+
