@@ -3,7 +3,6 @@ import pandas as pd
 
 # --- User Data Transformations ---
 def process_users(df_users, df_year_of_occurence):
-    """Processes user data to create new features like role, age, etc."""
     print("  Processing user data...")
     df_users_copy = df_users.copy()
 
