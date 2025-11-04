@@ -60,12 +60,19 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         .merge(vehicle_categories_involved_processed, on='id_accident', how='left')
     )
 
-    # Feature Engineering
-    feature_engineering_table = fe.create_time_features(merged_table)
-    feature_engineering_table = fe.create_age_feature(feature_engineering_table)
+    # --- Feature Engineering Pipeline ---
+    print(f"Starting Feature Engineering for year {df_circumstances_renamed['year'].iloc[0]}...")
+    feature_engineering_table = fe.create_datetime_features(merged_table)
+    feature_engineering_table = fe.create_age_features(feature_engineering_table)
     feature_engineering_table = fe.create_security_equipment_one_hot(feature_engineering_table)
+    feature_engineering_table = fe.create_vehicle_features(feature_engineering_table)
+    feature_engineering_table = fe.create_road_complexity_index(feature_engineering_table)
+    feature_engineering_table = fe.create_surface_quality_indicator(feature_engineering_table)
+    print("Feature Engineering complete.")
 
+    # --- Feature Selection ---
     feature_selection_table = fs.select_features(feature_engineering_table)
+    print("Feature Selection complete.")
 
     return {
         'B_renamed': {
@@ -81,13 +88,11 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
 
 
 def process_files(input_path: str, output_path: str = 'data'):
-    # --- CHANGED LINE ---
     # Use the input_path argument instead of a hardcoded string
     files_path = glob.glob(f'{input_path}/*-*.csv')
     years = sorted(list(set(re.findall(r'-(\d{4})\.csv', ' '.join(files_path)))))
 
     if not years:
-        # --- CHANGED LINE ---
         # Make the error message dynamic using the input_path
         print(f"No year-specific data files found in '{input_path}' directory.")
         print("Please ensure files are named like 'locations-2022.csv'.")
@@ -97,7 +102,6 @@ def process_files(input_path: str, output_path: str = 'data'):
         # Create the output path if not existent
         try:
             output_path: Path = Path(output_path)
-            output_path.mkdir(parents=True)
         except FileExistsError:
             print(f'The output folder "{output_path}" already exists. Skipping...')
         except PermissionError:
@@ -110,11 +114,10 @@ def process_files(input_path: str, output_path: str = 'data'):
         for year in years:
             try:
                 print(f"Processing data for year: {year}")
-                # These lines were already correct, as they use input_path
-                df_circumstances = pd.read_csv(f'{input_path}/characteristics-{year}.csv', sep=';', decimal=',')
-                df_locations = pd.read_csv(f'{input_path}/locations-{year}.csv', sep=';', decimal=',')
-                df_users = pd.read_csv(f'{input_path}/users-{year}.csv', sep=';', decimal=',')
-                df_vehicles = pd.read_csv(f'{input_path}/vehicles-{year}.csv', sep=';', decimal=',')
+                df_circumstances = pd.read_csv(f'{input_path}/characteristics-{year}.csv', sep=';', decimal=',', low_memory=False)
+                df_locations = pd.read_csv(f'{input_path}/locations-{year}.csv', sep=';', decimal=',', low_memory=False)
+                df_users = pd.read_csv(f'{input_path}/users-{year}.csv', sep=';', decimal=',', low_memory=False)
+                df_vehicles = pd.read_csv(f'{input_path}/vehicles-{year}.csv', sep=';', decimal=',', low_memory=False)
 
                 results: AccidentPreprocessingResult = process_year(df_circumstances, df_locations, df_users,
                                                                     df_vehicles)
@@ -133,6 +136,8 @@ def process_files(input_path: str, output_path: str = 'data'):
                             df.to_csv(file_path, sep=';', index=False)
 
                     else:
+                        # Remove the 'C_', 'D_', 'E_' prefix from the filename
+                        # e.g., 'C_merged' -> 'merged'
                         filename_base = folder_name.split('_', 1)[1]
                         file_path: Path = folder_path / f'{filename_base}-{year}.csv'
                         results[folder_name].to_csv(file_path, sep=';', index=False)
@@ -151,27 +156,21 @@ def process_files(input_path: str, output_path: str = 'data'):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    # --- Default for a Positional Argument ---
-    # To make a positional argument optional and use a default,
-    # you must set nargs='?'
     parser.add_argument(
         'input_path',
         help='The file path of the source files. (Default: "../data/A_original")',
         type=str,
-        nargs='?',                 # Makes this argument optional
+        nargs='?',  # Makes this argument optional
         default='../data/A_original'  # The value used if the argument is missing
     )
 
-    # --- Default for an Optional Argument ---
-    # This is simpler; just add the default parameter.
     parser.add_argument(
         '-o', '--output_path',
-        help='The path of the output folder. (Default: "../data")',
+        help='The path of the output folder. (Default: "../data/")',
         type=str,
-        default='../data'  # The value used if -o is not specified
+        default='../data/'  # The value used if -o is not specified
     )
 
     args = parser.parse_args()
-
-    # Now, process_files will always receive a value for both arguments
     process_files(args.input_path, args.output_path)
+
