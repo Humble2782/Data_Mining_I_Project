@@ -161,7 +161,7 @@ def process_user_vehicle_merge(df_users, df_vehicles):
     mask = (df_user_vehicle['user_category'] == 3)  # Is a pedestrian
     # For pedestrians, the 'other' vehicle is the one that struck them
     df_user_vehicle.loc[mask, vehicle_other] = df_user_vehicle.loc[mask, vehicle_features].to_numpy()
-    # Clear the original vehicle columns for pedestrians
+    # Clear the A_original vehicle columns for pedestrians
     df_user_vehicle.loc[mask, vehicle_features] = pd.NA
 
     return df_user_vehicle
