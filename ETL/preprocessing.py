@@ -11,8 +11,8 @@ from typing import TypedDict
 from helpers import a_rename as na
 from helpers import b_merge_tables as me
 from helpers import c_feature_engineering as fe
-from helpers import d_feature_selection as fs
-
+from helpers import d_handle_missing_values as hmv
+from helpers import e_feature_selection as fs
 
 # Typing
 class AccidentDataRenamed(TypedDict):
@@ -23,10 +23,12 @@ class AccidentDataRenamed(TypedDict):
 
 
 class AccidentPreprocessingResult(TypedDict):
-    renamed: AccidentDataRenamed
-    merged: pd.DataFrame
-    feature_engineering: pd.DataFrame
-    feature_selection: pd.DataFrame
+    # Updated keys to match the actual return dictionary
+    B_renamed: AccidentDataRenamed
+    C_merged: pd.DataFrame
+    D_feature_engineering: pd.DataFrame
+    E_missing_data_handling: pd.DataFrame
+    F_feature_selection: pd.DataFrame
 
 
 def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_users: pd.DataFrame,
@@ -68,13 +70,21 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
     feature_engineering_table = fe.create_vehicle_features(feature_engineering_table)
     feature_engineering_table = fe.create_road_complexity_index(feature_engineering_table)
     feature_engineering_table = fe.create_surface_quality_indicator(feature_engineering_table)
+    feature_engineering_table = fe.create_user_role(feature_engineering_table)
+    feature_engineering_table = fe.create_ordinal_conditions(feature_engineering_table)
     feature_engineering_table = fe.create_ordinal_target(feature_engineering_table)
     print("Feature Engineering complete.")
 
+    # --- Imputation Step ---
+    print("Starting Imputation...")
+    imputed_table = hmv.impute_missing_values(feature_engineering_table)
+    print("Imputation complete.")
+
     # --- Feature Selection ---
-    feature_selection_table = fs.select_features(feature_engineering_table)
+    feature_selection_table = fs.select_features(imputed_table)
     print("Feature Selection complete.")
 
+    # --- Updated return dictionary ---
     return {
         'B_renamed': {
             'circumstances': df_circumstances_renamed,
@@ -84,7 +94,8 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         },
         'C_merged': merged_table,
         'D_feature_engineering': feature_engineering_table,
-        'E_feature_selection': feature_selection_table
+        'E_missing_data_handling': imputed_table,
+        'F_feature_selection': feature_selection_table
     }
 
 
@@ -137,7 +148,7 @@ def process_files(input_path: str, output_path: str = 'data'):
                             df.to_csv(file_path, sep=';', index=False)
 
                     else:
-                        # Remove the 'C_', 'D_', 'E_' prefix from the filename
+                        # Remove the 'C_', 'D_', 'E_', 'F_' prefix from the filename
                         # e.g., 'C_merged' -> 'merged'
                         filename_base = folder_name.split('_', 1)[1]
                         file_path: Path = folder_path / f'{filename_base}-{year}.csv'
@@ -174,4 +185,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     process_files(args.input_path, args.output_path)
-

@@ -212,6 +212,80 @@ def create_surface_quality_indicator(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_copy
 
+def create_user_role(df_merged: pd.DataFrame) -> pd.DataFrame:
+    """
+    Creates the new categorical 'role' feature from 'user_category'.
+    - 'driver': (From user category = 1)
+    - 'passenger': (From user category = 2)
+    - 'pedestrian': (From user category = 3)
+    - 'other': (For any other or null value)
+    """
+    print("  Creating user 'role' feature...")
+    df_copy = df_merged.copy()
+
+    if 'user_category' in df_copy.columns:
+        role_map = {
+            1: 'driver',
+            2: 'passenger',
+            3: 'pedestrian'
+        }
+        # .fillna('other') maps all other values (like NaN, -1) to 'other'
+        df_copy['role'] = df_copy['user_category'].map(role_map).fillna('other')
+    else:
+        print("    ! 'user_category' column not found. Skipping 'role' creation.")
+        # Create a default column if source is missing so imputation doesn't fail
+        df_copy['role'] = 'other'
+
+    return df_copy
+
+def create_ordinal_conditions(df_merged: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remaps categorical weather and lighting conditions to a
+    meaningful ordinal scale representing risk/visibility.
+    """
+    print("  Creating ordinal weather and lighting features...")
+    df_copy = df_merged.copy()
+
+    # --- Lighting Condition ---
+    # 0 (Good) -> 1: Full day
+    # 1 (Medium) -> 5: Night with public lighting on
+    # 2 (Poor) -> 2: Twilight or dawn
+    # 3 (Very Poor) -> 3: Night without public lighting, 4: Night with public lighting not on
+    # Default: -1, others -> 0 (Good)
+    if 'lighting_condition' in df_copy.columns:
+        lighting_map = {
+            1: 0,  # Full day
+            5: 1,  # Night w/ light on
+            2: 2,  # Twilight/dawn
+            3: 3,  # Night w/o light
+            4: 3  # Night w/ light off
+        }
+        # .fillna(0) maps -1 (Not specified) and others to 0 (Good)
+        df_copy['lighting_ordinal'] = df_copy['lighting_condition'].map(lighting_map).fillna(0).astype(int)
+
+    # --- Weather Condition ---
+    # 0 (Good) -> 1: Normal
+    # 1 (Okay) -> 8: Overcast
+    # 2 (Slight Risk) -> 2: Light rain, 7: Dazzling weather
+    # 3 (Medium Risk) -> 6: Strong wind/storm, 3: Heavy rain
+    # 4 (High Risk) -> 5: Fog/smoke, 4: Snow/hail
+    # Default: -1, 9, others -> 0 (Good)
+    if 'weather_condition' in df_copy.columns:
+        weather_map = {
+            1: 0,  # Normal
+            8: 1,  # Overcast
+            2: 2,  # Light rain
+            7: 2,  # Dazzling
+            6: 3,  # Wind/storm
+            3: 3,  # Heavy rain
+            5: 4,  # Fog/smoke
+            4: 4  # Snow/hail
+        }
+        # .fillna(0) maps -1, 9 (Other), and others to 0 (Good)
+        df_copy['weather_ordinal'] = df_copy['weather_condition'].map(weather_map).fillna(0).astype(int)
+
+    return df_copy
+
 def create_ordinal_target(df_merged: pd.DataFrame) -> pd.DataFrame:
     """
     Creates the new ordinal target variable 'injury_target' based on
@@ -237,4 +311,3 @@ def create_ordinal_target(df_merged: pd.DataFrame) -> pd.DataFrame:
     # dropped in the d_feature_selection step.
 
     return df_copy
-
