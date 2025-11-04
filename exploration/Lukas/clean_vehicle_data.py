@@ -15,7 +15,7 @@ def impute_nans_own_vehicle(df: pd.DataFrame):
     
     # Impute missing values in pedestrian cases with "none" and in other cases with "unknown"
     df['vehicle_category'] = np.where((df['vehicle_category'].isna()) & (df['role'] == 'pedestrian'), 'none', df['vehicle_category'])#np.where((df['vehicle_category'].isna()) & (df['role'] != "pedestrian"), "unknown", df['vehicle_category']))
-    df = df.dropna(susbset=['vehicle_category'], how='any')
+    df = df.dropna(subset=['vehicle_category'], how='any')
 
     # Impute missing values for the columns below. For pedestrian cases, NaN values are replaced by -1. The other NaN values are replaced by 0. (unknown)
     cols_to_be_cleaned_own = ['main_maneuver_before_accident', 'motor_type', 'impact_score']
@@ -32,7 +32,7 @@ def impute_nans_other_vehicle(df:pd.DataFrame):
     
     # Replace NaN values with "none" when no other car is present, otherwise with "unknown"
     df['vehicle_category_other'] = np.where((df['vehicle_category_other'].isna()) & (df['other_vehicle'] == 0), "none", df['vehicle_category'])#np.where((df['vehicle_category_other'].isna()) & (df['other_vehicle'] == 1), "unknown", df['vehicle_category_other']))
-    df = df.dropna(susbset=['vehicle_category_other'], how='any')
+    df = df.dropna(subset=['vehicle_category_other'], how='any')
 
     # Replace NaN values with -1 when no other car is present otherwise with a 0
     cols_to_be_cleaned_other = ['initial_point_of_impact_other', 'main_maneuver_before_accident_other', 'motor_type_other', 'impact_score_other']
