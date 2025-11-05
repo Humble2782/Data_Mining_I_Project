@@ -99,35 +99,62 @@ def create_security_equipment_one_hot(df_merged: pd.DataFrame):
 
     return df_merged_copy
 
+
 def create_vehicle_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Simplifies vehicle categories and calculates an impact score.
+    Simplifies vehicle categories and calculates an impact score
+    for BOTH the primary and the 'other' vehicle.
+
+    - We know 'vehicle_category' is strings.
+    - We ADD logic for 'vehicle_category_other'.
+    - We ADD a 'n/a' key to the weights for single-vehicle accidents.
+    - We FIX 'impact_delta' to be directional (removed .abs()).
     """
     print("  Creating simplified vehicle features and impact scores...")
     df_copy = df.copy()
 
-    def simplify_vehicle_category(cat_id):
-        if pd.isna(cat_id): return 'unknown'
-        # Bicycles
-        if cat_id in {1, 80}: return "bicycle"
-        # Powered 2-3 wheelers
-        if cat_id in {2, 30, 41, 31, 32, 33, 34, 42, 43}: return "powered_2_3_wheeler"
-        # Light motor vehicles
-        if cat_id in {7, 10}: return "light_motor_vehicle"
-        # Heavy goods vehicles / trucks
-        if cat_id in {13, 14, 15, 16, 17}: return "hgv_truck"
-        # Bus or coach
-        if cat_id in {37, 38}: return "bus_coach"
-        return "other"
-
     IMPACT_WEIGHTS = {
         "hgv_truck": 6, "bus_coach": 5, "light_motor_vehicle": 4,
         "powered_2_3_wheeler": 3, "bicycle": 2, "other": 1, "unknown": 1,
+        "n/a": 0
     }
 
+    # --- 1. Process PRIMARY Vehicle ---
     if 'vehicle_category' in df_copy.columns:
-        df_copy['vehicle_category_simplified'] = df_copy['vehicle_category'].apply(simplify_vehicle_category)
+        print("    ...Processing 'vehicle_category' as strings.")
+
+        # 1. Assign and fill NaNs (from pedestrians, etc.)
+        # A primary user MUST be in a vehicle (or "unknown")
+        df_copy['vehicle_category_simplified'] = df_copy['vehicle_category'].fillna('unknown')
+
+        # 2. Strip whitespace (critical fix)
+        df_copy['vehicle_category_simplified'] = df_copy['vehicle_category_simplified'].astype(str).str.strip()
+
+        # 3. Map to weights
         df_copy['impact_score'] = df_copy['vehicle_category_simplified'].map(IMPACT_WEIGHTS).fillna(1)
+
+    # --- 2. Process OTHER Vehicle ---
+    if 'vehicle_category_other' in df_copy.columns:
+        print("    ...Processing 'vehicle_category_other' as strings.")
+
+        # 1. Assign and fill NaNs
+        # A NaN here means "no other vehicle", so we use "n/a"
+        df_copy['vehicle_category_simplified_other'] = df_copy['vehicle_category_other'].fillna('n/a')
+
+        # 2. Strip whitespace
+        df_copy['vehicle_category_simplified_other'] = df_copy['vehicle_category_simplified_other'].astype(
+            str).str.strip()
+
+        # 3. Map to weights
+        # "n/a" will map to 0.
+        df_copy['impact_score_other'] = df_copy['vehicle_category_simplified_other'].map(IMPACT_WEIGHTS).fillna(1)
+
+    # --- 3. Create Interaction Feature ---
+    # Calculate the *directional* difference in impact scores
+    # A negative value means "my vehicle" < "other vehicle" (higher risk)
+    if 'impact_score' in df_copy.columns and 'impact_score_other' in df_copy.columns:
+        print("    ...Calculating impact difference (delta).")
+        df_copy['impact_delta'] = (df_copy['impact_score'] - df_copy['impact_score_other'])
 
     return df_copy
 

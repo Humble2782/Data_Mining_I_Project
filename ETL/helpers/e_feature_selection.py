@@ -21,7 +21,6 @@ columns_to_drop = [
     'number_of_traffic_lanes', 'intersection', 'road_category', 'traffic_regime',  # Engineered into 'road_complexity_index'
     'pavement_condition', 'longitudinal_profile',  # Engineered into 'surface_quality_indicator'
     'user_category',  # Replaced by 'role'
-    'impact_score' # engineered into impact-vehicle features
 
     # Drop the original multi-class target variable.
     # We are replacing 'injury_severity' (1,2,3,4) with our new ordinal 'injury_target' (0,1,2).
