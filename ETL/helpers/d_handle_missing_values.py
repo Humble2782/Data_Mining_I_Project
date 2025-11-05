@@ -70,37 +70,50 @@ def impute_nans_other_vehicle(df: pd.DataFrame) -> pd.DataFrame:
         print("Warning: 'id_vehicle_other' column not found. 'other_vehicle' imputation might be incorrect.")
         df['other_vehicle'] = 0  # Assume no other vehicle if column is missing
 
-    # Impute initial impact other: -1 if no other vehicle
-    if 'initial_point_of_impact_other' in df.columns:
-        df.loc[
-            (df['initial_point_of_impact_other'].isna()) & (df['other_vehicle'] == 0),
-            'initial_point_of_impact_other'
-        ] = -1
+    # Impute N/A (-1) for all 'other' columns when other_vehicle == 0
+    cols_to_impute_other = [
+        'initial_point_of_impact_other',
+        'vehicle_category_other',
+        'main_maneuver_before_accident_other',
+        'motor_type_other',
+        'direction_of_travel_other',  # <-- Added from screenshot
+        'fixed_obstacle_struck_other',  # <-- Added from screenshot
+        'mobile_obstacle_struck_other'  # <-- Added from screenshot
+    ]
 
-    # Impute vehicle category other: 'none' if no other vehicle
-    if 'vehicle_category_other' in df.columns:
-        df.loc[
-            (df['vehicle_category_other'].isna()) & (df['other_vehicle'] == 0),
-            'vehicle_category_other'
-        ] = "none"
-
-    # Impute 'other' vehicle stats: -1 for no other vehicle, 0 for Unknown
-    # 'impact_score_other' has been removed from this list
-    cols_to_be_cleaned_other = ['main_maneuver_before_accident_other', 'motor_type_other']
-
-    for col in cols_to_be_cleaned_other:
-        # Check if column exists before using it
+    for col in cols_to_impute_other:
         if col in df.columns:
             is_na = df[col].isna()
-            # -1 if no other vehicle is involved (N/A)
-            df.loc[is_na & (df['other_vehicle'] == 0), col] = -1
-            # 0 if another vehicle is present, but the value is missing (Unknown)
-            df.loc[is_na & (df['other_vehicle'] == 1), col] = 0
+            is_no_other_vehicle = (df['other_vehicle'] == 0)
+
+            # Fill with -1 (N/A) if no other vehicle
+            if col == 'vehicle_category_other':
+                # Special case for category column: fill with 'none'
+                df.loc[is_na & is_no_other_vehicle, col] = "none"
+            else:
+                # Fill numeric columns with -1
+                df.loc[is_na & is_no_other_vehicle, col] = -1
+
+                # --- Handle "Unknown" (0) for cases WITH another vehicle ---
+                # These columns should be 0 (Unknown) if another vehicle exists but data is missing
+
+                cols_to_impute_unknown = [
+                    'main_maneuver_before_accident_other',
+                    'motor_type_other',
+                    'direction_of_travel_other',
+                    'fixed_obstacle_struck_other',
+                    'mobile_obstacle_struck_other'
+                ]
+
+                if col in cols_to_impute_unknown:
+                    # Fill with 0 (Unknown) if NaN AND a 2nd vehicle exists
+                    df.loc[is_na & (~is_no_other_vehicle), col] = 0
+
         else:
-            # Inform user that column is missing, but don't crash
             print(f"Warning: Column '{col}' not found in impute_nans_other_vehicle. Skipping.")
 
     # --- 2. Drop all remaining NaNs at the end ---
+    # These columns MUST have a value after imputation (either real, 'none', or -1)
     cols_to_drop_na_from = ['initial_point_of_impact_other', 'vehicle_category_other']
     final_drop_cols = [col for col in cols_to_drop_na_from if col in df.columns]
     if final_drop_cols:  # Only drop if list is not empty
@@ -114,11 +127,42 @@ def impute_nans_other_vehicle(df: pd.DataFrame) -> pd.DataFrame:
 def impute_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """
     Main function to run all imputation steps.
+    Includes a final "safety-net" imputation to remove all remaining NaNs.
     """
     print("  Handling missing values (Imputation & Filtering)...")
     # It's important to use .copy() when starting the chain here
     df_copy = df.copy()
     df_copy = impute_nans_own_vehicle(df_copy)
     df_copy = impute_nans_other_vehicle(df_copy)
+
+    # CRITICAL: Drop rows where the target variable is missing
+    # This MUST be done before the safety-net imputation.
+    original_rows = len(df_copy)
+    if 'injury_target' in df_copy.columns:
+        df_copy = df_copy.dropna(subset=['injury_target'])
+        rows_dropped = original_rows - len(df_copy)
+        if rows_dropped > 0:
+            print(f"  ...Dropped {rows_dropped} rows with missing target variable.")
+
+    # --- Safety-net imputation (Targeted) ---
+    # Impute all remaining NaNs to ensure no model errors
+
+    # 1. Fill known categorical NaNs (e.g., 'age_group' from screenshot)
+    cat_cols = df_copy.select_dtypes(include=['object', 'category']).columns
+    for col in cat_cols:
+        # Check if the column is a pandas Categorical type
+        if pd.api.types.is_categorical_dtype(df_copy[col]):
+            # If it is, we MUST add 'Unknown' as a valid category first
+            if 'Unknown' not in df_copy[col].cat.categories:
+                df_copy[col] = df_copy[col].cat.add_categories('Unknown')
+
+        # Now we can safely fill the NaNs (works for 'object' and 'category')
+        df_copy[col] = df_copy[col].fillna('Unknown')
+
+    # 2. Fill specific known numerical NaNs
+    # We use 0 as a neutral default, 'age_group' is already 'Unknown'
+    if 'age' in df_copy.columns:
+        df_copy.loc[df_copy['age'].isna(), 'age'] = 0
+
     print("  ...Handling missing values complete.")
     return df_copy

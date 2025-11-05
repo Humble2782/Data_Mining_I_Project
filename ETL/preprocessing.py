@@ -84,6 +84,17 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
     feature_selection_table = fs.select_features(imputed_table)
     print("Feature Selection complete.")
 
+    # --- Verification Step ---
+    # Check for any NaNs that slipped through the targeted imputation
+    remaining_nans = feature_selection_table.isnull().sum()
+    remaining_nans = remaining_nans[remaining_nans > 0]  # Filter for columns that still have NaNs
+
+    if not remaining_nans.empty:
+        print("\n--- WARNING: Missing values found after imputation and feature selection ---")
+        print("The following columns still contain NaNs:")
+        print(remaining_nans)
+        print("--------------------------------------------------------\n")
+
     # --- Updated return dictionary ---
     return {
         'B_renamed': {
