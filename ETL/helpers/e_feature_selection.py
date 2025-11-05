@@ -17,10 +17,13 @@ columns_to_drop = [
     'hour_minute',  # Original string column, already dropped in c_feature_engineering
     'hour', 'minute',  # Replaced by 'time_of_day', 'hour_sin', 'hour_cos'
     'safety_equipment_1', 'safety_equipment_2', 'safety_equipment_3',  # Replaced by 'used_belt', 'used_helmet', etc.
-    'vehicle_category',  # Replaced by 'vehicle_category_simplified', 'impact_score'
+    'vehicle_category',  # Replaced by 'vehicle_category_simplified'
+    'vehicle_category_other',  # Replaced by 'vehicle_category_simplified_other'
     'number_of_traffic_lanes', 'intersection', 'road_category', 'traffic_regime',  # Engineered into 'road_complexity_index'
     'pavement_condition', 'longitudinal_profile',  # Engineered into 'surface_quality_indicator'
     'user_category',  # Replaced by 'role'
+    'weather_condition',  # Replaced by 'weather_condition_ordinal'
+    'lighting_condition',  # Replaced by 'lighting_condition_ordinal'
 
     # Drop the original multi-class target variable.
     # We are replacing 'injury_severity' (1,2,3,4) with our new ordinal 'injury_target' (0,1,2).
