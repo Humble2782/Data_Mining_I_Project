@@ -17,6 +17,8 @@
 \usepackage[usenames,dvipsnames]{xcolor}
 \usepackage[colorlinks,citecolor=Green]{hyperref} % you may change/remove the colors
 \usepackage{lipsum} % you do not need this
+\usepackage[T1]{fontenc} % For better font encoding and handling of underscores
+\usepackage{lmodern} % Modern LaTeX font
 
 % chicago citation style
 \usepackage{natbib}
@@ -25,6 +27,13 @@
 
 % example enviroments (add more as needed)
 \newtheorem{definition}{Definition} \newtheorem{proposition}{Proposition}
+
+% Use \texttt for code/column names to handle underscores correctly
+% --- FIX ---
+% Changed \texttt{#1} to \texttt{\detokenize{#1}}
+% This prevents LaTeX from treating underscores (_) as math characters
+% and fixes the compilation error.
+\newcommand{\col}[1]{\texttt{\detokenize{#1}}}
 
 \begin{document}
 
@@ -39,7 +48,7 @@
 
 
 \frontmatter \subject{Predicting Injury Severity in Road Accidents: A Real-Time Classification Approach} % change to appropriate type
-\title{Column Description and Feature Engineering}
+\title{Feature Description}
 \author{
   David Cebulla (1922129)\\
   Gabriel Himmelein (1649181)\\
@@ -53,70 +62,43 @@
   University of Mannheim\\}
 \maketitle
 
-
-% none of the things below is needed, but you may add them if you feel that they
-% are helpful for your work \listofalgorithms \listoffigures \listoftables
-% \listtheorems{definition} \listtheorems{proposition}
-
-
-% okay, start new numbering ... here is where it really starts
 \mainmatter
-\section{General}
+\section{Introduction}
+This document describes all features available in the final dataset (after the \texttt{F\_feature\_selection} step) used for model training. The features are divided into two main groups:
 
-The columns can be divided into two main groups:
 \begin{enumerate}
-    \item \textbf{Original Columns:} Data originating from the original French datasets and translated into English by \texttt{a\_rename.py}.
-    \item \textbf{Engineered Features:} New columns calculated and added in \texttt{c\_feature\_engineering.py} to enrich the dataset.
+    \item \textbf{Original Features:} Columns originating from the raw datasets (renamed in \texttt{a\_rename.py}) that were retained.
+    \item \textbf{Engineered Features:} New columns calculated in \texttt{c\_feature\_engineering.py} or \texttt{b\_merge\_tables.py} to model complex relationships.
 \end{enumerate}
 
-\section{Original Columns}
-These columns describe the core information about the accident, location, vehicles, and users.
+Both groups are further subdivided by data type: \textbf{Nominal} (Categorical, no order), \textbf{Ordinal} (Categorical, with order), and \textbf{Numerical} (Continuous).
 
-\subsection{General Accident Characteristics}
+\section{Target Variable (The Feature to Predict)}
+This is the single, engineered column that the model is trained to predict.
+
+\subsection{Ordinal}
 \begin{itemize}
-    \item \textbf{\texttt{year}}: Year of the accident. \textit{(Original: \texttt{an})}
-    \item \textbf{\texttt{hour\_minute}}: Exact hour and minute of the accident. \textit{(Original: \texttt{hrmn})}
-    \item \textbf{\texttt{lighting\_condition}}: Lighting conditions under which the accident occurred. \textit{(Original: \texttt{lum})}
+    \item \textbf{\col{injury_target}}: (Engineered) Our new, ordinal target variable representing the severity of the injury. It is derived from the original \col{injury_severity} column.
         \begin{itemize}
-            \item \texttt{1}: Full day
-            \item \texttt{2}: Twilight or dawn
-            \item \texttt{3}: Night without public lighting
-            \item \texttt{4}: Night with public lighting not on
-            \item \texttt{5}: Night with public lighting on
+            \item \texttt{0}: Uninjured (from Original: 1)
+            \item \texttt{1}: Lightly Injured (from Original: 4)
+            \item \texttt{2}: Severe (Hospitalized or Killed) (from Original: 2, 3)
         \end{itemize}
-    \item \textbf{\texttt{location}}: Location of the accident. \textit{(Original: \texttt{agg})}
+\end{itemize}
+
+\section{Original Features (Retained from Source Data)}
+These columns are loaded from the raw data, renamed, and are retained after all processing and feature selection steps.
+
+\subsection{Nominal Features (Categorical)}
+\begin{itemize}
+    \item \textbf{\col{location}}: Location of the accident. \textit{(Original: \col{agg})}
         \begin{itemize}
             \item \texttt{1}: Outside built-up area
             \item \texttt{2}: In built-up area
         \end{itemize}
-    \item \textbf{\texttt{intersection}}: Type of intersection. \textit{(Original: \texttt{int})}
+    \item \textbf{\col{type_of_collision}}: Type of collision. \textit{(Original: \col{col})}
         \begin{itemize}
-            \item \texttt{1}: Outside intersection
-            \item \texttt{2}: X-intersection
-            \item \texttt{3}: T-intersection
-            \item \texttt{4}: Y-intersection
-            \item \texttt{5}: Intersection with >4 branches
-            \item \texttt{6}: Roundabout
-            \item \texttt{7}: Place / Square
-            \item \texttt{8}: Level crossing
-            \item \texttt{9}: Other intersection
-        \end{itemize}
-    \item \textbf{\texttt{weather\_condition}}: Atmospheric conditions. \textit{(Original: \texttt{atm})}
-        \begin{itemize}
-            \item \texttt{-1}: Not specified
-            \item \texttt{1}: Normal
-            \item \texttt{2}: Light rain
-            \item \texttt{3}: Heavy rain
-            \item \texttt{4}: Snow - hail
-            \item \texttt{5}: Fog - smoke
-            \item \texttt{6}: Strong wind - storm
-            \item \texttt{7}: Dazzling weather
-            \item \texttt{8}: Overcast
-            \item \texttt{9}: Other
-        \end{itemize}
-    \item \textbf{\texttt{type\_of\_collision}}: Type of collision. \textit{(Original: \texttt{col})}
-        \begin{itemize}
-            \item \texttt{-1}: Not specified
+            \item \texttt{-1}: Not specified (imputed)
             \item \texttt{1}: Two vehicles - frontal
             \item \texttt{2}: Two vehicles - from behind
             \item \texttt{3}: Two vehicles - from the side
@@ -125,33 +107,7 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{6}: Other collision
             \item \texttt{7}: Without collision
         \end{itemize}
-    \item \textbf{\texttt{latitude}}: Latitude (WGS84). \textit{(Original: \texttt{lat})}
-    \item \textbf{\texttt{longitude}}: Longitude (WGS84). \textit{(Original: \texttt{long})}
-\end{itemize}
-
-\subsection{Location Characteristics}
-\begin{itemize}
-    \item \textbf{\texttt{road\_category}}: Category of the road. \textit{(Original: \texttt{catr})}
-        \begin{itemize}
-            \item \texttt{1}: Motorway
-            \item \texttt{2}: National Road
-            \item \texttt{3}: Departmental Road
-            \item \texttt{4}: Communal Way
-            \item \texttt{5}: Off public network
-            \item \texttt{6}: Public parking lot
-            \item \texttt{7}: Urban metropolis roads
-            \item \texttt{9}: Other
-        \end{itemize}
-    \item \textbf{\texttt{traffic\_regime}}: Traffic regime. \textit{(Original: \texttt{circ})}
-        \begin{itemize}
-            \item \texttt{-1}: Not specified
-            \item \texttt{1}: One-way
-            \item \texttt{2}: Two-way
-            \item \texttt{3}: Separated carriageways
-            \item \texttt{4}: With variable assignment lanes
-        \end{itemize}
-    \item \textbf{\texttt{number\_of\_traffic\_lanes}}: Total number of traffic lanes. \textit{(Original: \texttt{nbv})}
-    \item \textbf{\texttt{reserved\_lane\_present}}: Indicates the existence of a reserved lane. \textit{(Original: \texttt{vosp})}
+    \item \textbf{\col{reserved_lane_present}}: Indicates the existence of a reserved lane. \textit{(Original: \col{vosp})}
         \begin{itemize}
             \item \texttt{-1}: Not specified
             \item \texttt{0}: Not applicable
@@ -159,15 +115,7 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{2}: Bicycle lane
             \item \texttt{3}: Reserved lane
         \end{itemize}
-    \item \textbf{\texttt{longitudinal\_profile}}: Longitudinal profile (slope) of the road. \textit{(Original: \texttt{prof})}
-        \begin{itemize}
-            \item \texttt{-1}: Not specified
-            \item \texttt{1}: Flat
-            \item \texttt{2}: Slope
-            \item \texttt{3}: Top of hill
-            \item \texttt{4}: Bottom of hill
-        \end{itemize}
-    \item \textbf{\texttt{horizontal\_alignment}}: Horizontal alignment (plan) of the road. \textit{(Original: \texttt{plan})}
+    \item \textbf{\col{horizontal_alignment}}: Horizontal alignment (plan) of the road. \textit{(Original: \col{plan})}
         \begin{itemize}
             \item \texttt{-1}: Not specified
             \item \texttt{1}: Straight section
@@ -175,21 +123,7 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{3}: Right curve
             \item \texttt{4}: In "S" shape
         \end{itemize}
-    \item \textbf{\texttt{carriageway\_width}}: Width of the carriageway (in meters), excluding central reservations or parking. \textit{(Original: \texttt{larrout})}
-    \item \textbf{\texttt{pavement\_condition}}: Condition of the road surface. \textit{(Original: \texttt{surf})}
-        \begin{itemize}
-            \item \texttt{-1}: Not specified
-            \item \texttt{1}: Normal
-            \item \texttt{2}: Wet
-            \item \texttt{3}: Puddles
-            \item \texttt{4}: Flooded
-            \item \texttt{5}: Snowy
-            \item \texttt{6}: Mud
-            \item \texttt{7}: Icy
-            \item \texttt{8}: Grease - oil
-            \item \texttt{9}: Other
-        \end{itemize}
-    \item \textbf{\texttt{infrastructure}}: Special infrastructure or facilities at the accident site. \textit{(Original: \texttt{infra})}
+    \item \textbf{\col{infrastructure}}: Special infrastructure at the accident site. \textit{(Original: \col{infra})}
         \begin{itemize}
             \item \texttt{-1}: Not specified
             \item \texttt{0}: None
@@ -203,7 +137,7 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{8}: Construction site
             \item \texttt{9}: Others
         \end{itemize}
-    \item \textbf{\texttt{accident\_situation}}: Situation of the accident. \textit{(Original: \texttt{situ})}
+    \item \textbf{\col{accident_situation}}: Situation of the accident. \textit{(Original: \col{situ})}
         \begin{itemize}
             \item \texttt{-1}: Not specified
             \item \texttt{0}: None
@@ -215,52 +149,26 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{6}: On other special lane
             \item \texttt{8}: Others
         \end{itemize}
-    \item \textbf{\texttt{speed\_limit}}: Authorized speed limit at the time and place of the accident. \textit{(Original: \texttt{vma})}
-\end{itemize}
-
-\subsection{User Characteristics (Occupants/Pedestrians)}
-\begin{itemize}
-    \item \textbf{\texttt{position}}: Position occupied by the user in the vehicle (e.g., \texttt{1}: Driver, \texttt{2}-\texttt{9}: Passenger seats). \textit{(Original: \texttt{place})}
-    \item \textbf{\texttt{user\_category}}: Category of the user. \textit{(Original: \texttt{catu})}
-        \begin{itemize}
-            \item \texttt{1}: Driver
-            \item \texttt{2}: Passenger
-            \item \texttt{3}: Pedestrian
-        \end{itemize}
-     \item \textbf{\texttt{role}}: User's role, derived from \texttt{user\_category}. \textit{(Created in \texttt{b\_table\_merge.py})}
-        \begin{itemize}
-            \item \texttt{'driver'}: (From \texttt{user\_category} = 1)
-            \item \texttt{'passenger'}: (From \texttt{user\_category} = 2)
-            \item \texttt{'pedestrian'}: (From \texttt{user\_category} = 3)
-            \item \texttt{'other'}: (For any other or null value)
-        \end{itemize}
-    \item \textbf{\texttt{injury\_severity}}: Severity of the user's injury. \textit{(Original: \texttt{grav})}
-        \begin{itemize}
-            \item \texttt{1}: Uninjured
-            \item \texttt{2}: Killed
-            \item \texttt{3}: Hospitalized injured
-            \item \texttt{4}: Lightly injured
-        \end{itemize}
-    \item \textbf{\texttt{sex}}: Sex of the user. \textit{(Original: \texttt{sexe})}
+    \item \textbf{\col{sex}}: Sex of the user. \textit{(Original: \col{sexe})}
         \begin{itemize}
             \item \texttt{1}: Male
             \item \texttt{2}: Female
         \end{itemize}
-    \item \textbf{\texttt{pedestrian\_location}}: Location of the pedestrian at the time of the accident. \textit{(Original: \texttt{locp})}
+    \item \textbf{\col{pedestrian_location}}: Location of the pedestrian at the time of the accident. \textit{(Original: \col{locp})}
         \begin{itemize}
             \item \texttt{-1}: Not specified
             \item \texttt{0}: Not applicable
             \item \texttt{1}: On roadway, >50m from pedestrian crossing
             \item \texttt{2}: On roadway, <50m from pedestrian crossing
             \item \texttt{3}: On pedestrian crossing, without traffic light
-            \item \texttt{4}: On pedestrian crossing, with traffic light
+            \item \texttt{44}: On pedestrian crossing, with traffic light
             \item \texttt{5}: On sidewalk
             \item \texttt{6}: On shoulder
             \item \texttt{7}: On refuge or emergency lane
             \item \texttt{8}: On parallel lane
             \item \texttt{9}: Unknown
         \end{itemize}
-    \item \textbf{\texttt{pedestrian\_action}}: Action of the pedestrian. \textit{(Original: \texttt{actp})}
+    \item \textbf{\col{pedestrian_action}}: Action of the pedestrian. \textit{(Original: \col{actp})}
         \begin{itemize}
             \item \texttt{-1}: Not specified
             \item \texttt{0}: Not specified or not applicable
@@ -274,65 +182,9 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{A}: Getting on/off vehicle
             \item \texttt{B}: Unknown
         \end{itemize}
-\end{itemize}
-
-\subsection{Vehicle Characteristics}
-\begin{itemize}
-    \item \textbf{\texttt{number\_vehicle\_x}} / \textbf{\texttt{number\_vehicle\_y}}: Vehicle identification number within the accident (e.g., A01, B01). \textit{(Original: \texttt{num\_veh})}. The \texttt{\_x} and \texttt{\_y} suffixes typically result from merging tables.
-    \item \textbf{\texttt{direction\_of\_travel}}: Direction of travel. \textit{(Original: \texttt{senc})}
+    \item \textbf{\col{fixed_obstacle_struck}}: Fixed obstacle struck by the primary vehicle. \textit{(Original: \col{obs})}. Imputed with -1 (N/A) for pedestrians.
         \begin{itemize}
-            \item \texttt{-1}: Not specified
-            \item \texttt{0}: Unknown
-            \item \texttt{1}: Increasing PK/PR or postal address number
-            \item \texttt{2}: Decreasing PK/PR or postal address number
-            \item \texttt{3}: No landmark
-        \end{itemize}
-    \item \textbf{\texttt{vehicle\_category}}: Detailed vehicle category. \textit{(Original: \texttt{catv})}
-        \begin{itemize}
-            \item \texttt{00}: Indeterminable
-            \item \texttt{01}: Bicycle
-            \item \texttt{02}: Moped <50cm3
-            \item \texttt{03}: Light quadricycle (car-bodied)
-            \item \texttt{04}: Unused reference since 2006 (registered scooter)
-            \item \texttt{05}: Unused reference since 2006 (motorcycle)
-            \item \texttt{06}: Unused reference since 2006 (side-car)
-            \item \texttt{07}: Light vehicle alone
-            \item \texttt{08}: Unused reference since 2006 (LV + caravan)
-            \item \texttt{09}: Unused reference since 2006 (LV + trailer)
-            \item \texttt{10}: Utility vehicle (1.5T <= GVW <= 3.5T)
-            \item \texttt{11}: Unused reference since 2006 (UV (10) + caravan)
-            \item \texttt{12}: Unused reference since 2006 (UV (10) + trailer)
-            \item \texttt{13}: HGV alone (3.5T < GVW <= 7.5T)
-            \item \texttt{14}: HGV alone > 7.5T
-            \item \texttt{15}: HGV > 3.5T + trailer
-            \item \texttt{16}: Road tractor alone
-            \item \texttt{17}: Road tractor + semi-trailer
-            \item \texttt{18}: Unused reference since 2006 (public transport)
-            \item \texttt{19}: Unused reference since 2006 (tramway)
-            \item \texttt{20}: Special machine
-            \item \texttt{21}: Agricultural tractor
-            \item \texttt{30}: Scooter < 50 cm3
-            \item \texttt{31}: Motorcycle > 50 cm3 and <= 125 cm3
-            \item \texttt{32}: Scooter > 50 cm3 and <= 125 cm3
-            \item \texttt{33}: Motorcycle > 125 cm3
-            \item \texttt{34}: Scooter > 125 cm3
-            \item \texttt{35}: Light quad <= 50 cm3 (non-car-bodied)
-            \item \texttt{36}: Heavy quad > 50 cm3 (non-car-bodied)
-            \item \texttt{37}: Bus
-            \item \texttt{38}: Coach
-            \item \texttt{39}: Train
-            \item \texttt{40}: Tramway
-            \item \texttt{41}: 3-wheeler <= 50 cm3
-            \item \texttt{42}: 3-wheeler 50 cm3 <= 125 cm3
-            \item \texttt{43}: 3-wheeler > 125 cm3
-            \item \texttt{50}: Motorized personal mobility device
-            \item \texttt{60}: Non-motorized personal mobility device
-            \item \texttt{80}: E-bike
-            \item \texttt{99}: Other vehicle
-        \end{itemize}
-    \item \textbf{\texttt{fixed\_obstacle\_struck}}: Fixed obstacle struck. \textit{(Original: \texttt{obs})}
-        \begin{itemize}
-            \item \texttt{-1}: Not specified
+            \item \texttt{-1}: Not specified / N/A
             \item \texttt{0}: Not applicable
             \item \texttt{1}: Parked vehicle
             \item \texttt{2}: Tree
@@ -352,9 +204,9 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{16}: Road exit without obstacle
             \item \texttt{17}: Culvert
         \end{itemize}
-    \item \textbf{\texttt{mobile\_obstacle\_struck}}: Mobile obstacle struck. \textit{(Original: \texttt{obsm})}
+    \item \textbf{\col{mobile_obstacle_struck}}: Mobile obstacle struck by the primary vehicle. \textit{(Original: \col{obsm})}. Imputed with -1 (N/A) for pedestrians.
         \begin{itemize}
-            \item \texttt{-1}: Not specified
+            \item \texttt{-1}: Not specified / N/A
             \item \texttt{0}: None
             \item \texttt{1}: Pedestrian
             \item \texttt{2}: Vehicle
@@ -363,9 +215,9 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{6}: Wild animal
             \item \texttt{9}: Other
         \end{itemize}
-    \item \textbf{\texttt{initial\_point\_of\_impact}}: Initial point of impact on the vehicle. \textit{(Original: \texttt{choc})}
+    \item \textbf{\col{initial_point_of_impact}}: Initial point of impact on the primary vehicle. \textit{(Original: \col{choc})}. Imputed with -1 (N/A) for pedestrians.
         \begin{itemize}
-            \item \texttt{-1}: Not specified
+            \item \texttt{-1}: Not specified / N/A
             \item \texttt{0}: None
             \item \texttt{1}: Front
             \item \texttt{2}: Front right
@@ -377,42 +229,17 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{8}: Left side
             \item \texttt{9}: Multiple impacts (rollover)
         \end{itemize}
-        \textit{Note: The source document contained warnings indicating that typo values (\texttt{44} for profile, \texttt{44} for pavement, \texttt{11} for mobile obstacle) might exist in older data. The correct values are used here.}
-
-    \item \textbf{\texttt{main\_maneuver\_before\_accident}}: Main maneuver before the accident. \textit{(Original: \texttt{manv})}
+    \item \textbf{\col{main_maneuver_before_accident}}: Main maneuver of the primary vehicle. \textit{(Original: \col{manv})}. Imputed with -1 (N/A) for pedestrians/passengers, 0 (Unknown) for drivers.
         \begin{itemize}
-            \item \texttt{-1}: Not specified
+            \item \texttt{-1}: Not specified / N/A
             \item \texttt{0}: Unknown
             \item \texttt{1}: Without change of direction
-            \item \texttt{2}: Same direction, same lane
-            \item \texttt{3}: Between 2 lanes
-            \item \texttt{4}: Reversing
-            \item \texttt{5}: Wrong way
-            \item \texttt{6}: Crossing central reservation
-            \item \texttt{7}: In bus lane, same direction
-            \item \texttt{8}: In bus lane, opposite direction
-            \item \texttt{9}: Merging
-            \item \texttt{10}: Making a U-turn on the roadway
-            \item \texttt{11}: Changing lane: Left
-            \item \texttt{12}: Changing lane: Right
-            \item \texttt{13}: Veering: Left
-            \item \texttt{14}: Veering: Right
-            \item \texttt{15}: Turning: Left
-            \item \texttt{16}: Turning: Right
-            \item \texttt{17}: Overtaking: Left
-            \item \texttt{18}: Overtaking: Right
-            \item \texttt{19}: Crossing the roadway
-            \item \texttt{20}: Parking maneuver
-            \item \texttt{21}: Evasive maneuver
-            \item \texttt{22}: Opening door
-            \item \texttt{23}: Stopped (not parked)
-            \item \texttt{24}: Parked (with occupants)
-            \item \texttt{25}: Driving on sidewalk
+            \item \texttt{...} (Full list in original file)
             \item \texttt{26}: Other maneuvers
         \end{itemize}
-    \item \textbf{\texttt{motor\_type}}: Type of vehicle motorization. \textit{(Original: \texttt{motor})}
+    \item \textbf{\col{motor_type}}: Motorization type of the primary vehicle. \textit{(Original: \col{motor})}. Imputed with -1 (N/A) for pedestrians/passengers, 0 (Unknown) for drivers.
         \begin{itemize}
-            \item \texttt{-1}: Not specified
+            \item \texttt{-1}: Not specified / N/A
             \item \texttt{0}: Unknown
             \item \texttt{1}: Hydrocarbon (Gasoline/Diesel)
             \item \texttt{2}: Hybrid electric
@@ -421,22 +248,101 @@ These columns describe the core information about the accident, location, vehicl
             \item \texttt{5}: Human (e.g., bicycle)
             \item \texttt{6}: Other
         \end{itemize}
+    
+    \item \textbf{\col{direction_of_travel_other}}, \textbf{\col{fixed_obstacle_struck_other}}, \textbf{\col{mobile_obstacle_struck_other}}, \textbf{\col{initial_point_of_impact_other}}, \textbf{\col{main_maneuver_before_accident_other}}, \textbf{\col{motor_type_other}}:
+    \textit{Note on \col{_other} columns:} These features describe the \textbf{highest-impact "other" vehicle} involved in the accident (determined in \texttt{b\_merge\_tables.py}). They follow the same code definitions as their primary counterparts. In \texttt{d\_handle\_missing\_values.py}, \texttt{NaN} values are imputed with \textbf{\texttt{-1}} (N/A) if no second vehicle was involved, or \textbf{\texttt{0}} (Unknown) if a second vehicle was present but the data was missing.
+
 \end{itemize}
 
-\section{Engineered Features (From c\_feature\_engineering.py)}
-These columns were newly created to model more complex relationships.
+\subsection{Ordinal Features (Ordered Categories)}
 \begin{itemize}
-    \item \textbf{\texttt{vehicle\_category\_simplified}}: A simplified grouping of the detailed \texttt{vehicle\_category}. Possible values: \texttt{bicycle}, \texttt{powered\_2\_3\_wheeler}, \texttt{light\_motor\_vehicle}, \texttt{hgv\_truck}, \texttt{bus\_coach}, \texttt{other}, \texttt{unknown}.
-    \item \textbf{\texttt{impact\_score}}: A calculated "impact score" (weight) based on the \texttt{vehicle\_category\_simplified} (e.g., \texttt{hgv\_truck}: 6, \texttt{light\_motor\_vehicle}: 4, \texttt{bicycle}: 2).
-    \item \textbf{\texttt{age}}: The user's age at the time of the accident, calculated as \texttt{year} - \texttt{year\_of\_birth}.
-    \item \textbf{\texttt{age\_group}}: An age bracket based on the \texttt{age}: \texttt{child\_teen} (0-17), \texttt{young\_adult} (18-24), \texttt{adult} (25-39), \texttt{middle\_aged} (40-64), \texttt{senior} (65+).
-    \item \textbf{\texttt{used\_belt}}: A binary indicator (1 or 0) specifying if the user used a seatbelt (based on \texttt{safety\_equipment\_1}, \texttt{\_2}, \texttt{\_3} columns, where the value \texttt{1} means "Belt").
-    \item \textbf{\texttt{used\_helmet}}: A binary indicator (1 or 0) specifying if the user used a helmet (based on \texttt{safety\_equipment\_1}, \texttt{\_2}, \texttt{\_3} columns, where the value \texttt{2} means "Helmet").
-    \item \textbf{\texttt{day\_of\_week\_sin}} / \textbf{\texttt{day\_of\_week\_cos}}: Cyclical features (Sine/Cosine) representing the day of the week to model weekly seasonality.
-    \item \textbf{\texttt{month\_sin}} / \textbf{\texttt{month\_cos}}: Cyclical features (Sine/Cosine) representing the month to model annual seasonality.
-    \item \textbf{\texttt{day\_of\_year\_sin}} / \textbf{\texttt{day\_of\_year\_cos}}: Cyclical features (Sine/Cosine) representing the day of the year (more granular annual seasonality).
-    \item \textbf{\texttt{road\_complexity\_index}}: An index (scaled from 0-10) that assesses the complexity of the road. It is based on a weighted sum of \texttt{intersection}, \texttt{road\_category}, \texttt{traffic\_regime}, and \texttt{number\_of\_traffic\_lanes}.
-    \item \textbf{\texttt{surface\_quality\_indicator}}: A binary indicator (\texttt{1}=good, \texttt{0}=bad). It is only \texttt{1} (good) if the \texttt{pavement\_condition} is "Normal" (1) AND the \texttt{longitudinal\_profile} is "Flat" (1).
+    \item \textbf{\col{position}}: Position occupied by the user in the vehicle. \textit{(Original: \col{place})}. (e.g., \texttt{1}: Driver, \texttt{2}-\texttt{9}: Passenger seats).
+\end{itemize}
+
+\subsection{Numerical Features (Continuous)}
+\begin{itemize}
+    \item \textbf{\col{latitude}}: Latitude (WGS84). \textit{(Original: \col{lat})}
+    \item \textbf{\col{longitude}}: Longitude (WGS84). \textit{(Original: \col{long})}
+    \item \textbf{\col{speed_limit}}: Authorized speed limit at the accident site. \textit{(Original: \col{vma})}
+\end{itemize}
+
+
+\section{Engineered Features (Created by the Pipeline)}
+These columns are newly calculated in \texttt{c\_feature\_engineering.py} or \texttt{b\_merge\_tables.py}.
+
+\subsection{Nominal Features (Categorical)}
+\begin{itemize}
+    \item \textbf{\col{time_of_day}}: Categorical time bucket derived from \col{hour}.
+        \begin{itemize}
+            \item \texttt{'Night'}: 00:00 - 05:59, 20:00 - 23:59
+            \item \texttt{'Morning\_Rush'}: 06:00 - 09:59
+            \item \texttt{'Midday'}: 10:00 - 15:59
+            \item \texttt{'Evening\_Rush'}: 16:00 - 19:59
+        \end{itemize}
+    \item \textbf{\col{age_group}}: Age bracket derived from \col{age}.
+        \begin{itemize}
+            \item \texttt{'child\_teen'}: 0-17
+            \item \texttt{'young\_adult'}: 18-24
+            \item \texttt{'adult'}: 25-39
+            \item \texttt{'middle\_aged'}: 40-64
+            \item \texttt{'senior'}: 65+
+            \item \texttt{'Unknown'}: Imputed value
+        \end{itemize}
+    \item \textbf{\col{role}}: Simplified user role, derived from \col{user_category}.
+        \begin{itemize}
+            \item \texttt{'driver'}: (Original: 1)
+            \item \texttt{'passenger'}: (Original: 2)
+            \item \texttt{'pedestrian'}: (Original: 3)
+            \item \texttt{'other'}: (Imputed value)
+        \end{itemize}
+    \item \textbf{\col{vehicle_category_simplified}}: Simplified vehicle category for the primary vehicle. (e.g., \texttt{'light\_motor\_vehicle'}, \texttt{'hgv\_truck'}, \texttt{'bicycle'}, \texttt{'unknown'}, etc.)
+    \item \textbf{\col{vehicle_category_simplified_other}}: Simplified vehicle category for the \textit{other} vehicle. (Includes \texttt{'n/a'} for no other vehicle).
+    \item \textbf{\col{used_belt}}: (Binary) 1 if user used a seatbelt, 0 otherwise.
+    \item \textbf{\col{used_helmet}}: (Binary) 1 if user used a helmet, 0 otherwise.
+    \item \textbf{\col{used_child_restraint}}: (Binary) 1 if a child restraint was used, 0 otherwise.
+    \item \textbf{\col{used_airbag}}: (Binary) 1 if airbag was deployed/used, 0 otherwise.
+    \item \textbf{\col{surface_quality_indicator}}: (Binary) 1 if \col{pavement_condition} = "Normal" (1) AND \col{longitudinal_profile} = "Flat" (1), 0 otherwise.
+    
+    \item \textbf{\col{vehicle_category_involved_bicycle}}: (Binary) 1 if at least one bicycle was involved in the accident, 0 otherwise.
+    \item \textbf{\col{vehicle_category_involved_bus_coach}}: (Binary) 1 if a bus/coach was involved.
+    \item \textbf{\col{vehicle_category_involved_hgv_truck}}: (Binary) 1 if a heavy truck was involved.
+    \item \textbf{\col{vehicle_category_involved_light_motor_vehicle}}: (Binary) 1 if a light motor vehicle/car was involved.
+    \item \textbf{\col{vehicle_category_involved_other}}: (Binary) 1 if an "other" vehicle type was involved.
+    \item \textbf{\col{vehicle_category_involved_powered_2_3_wheeler}}: (Binary) 1 if a moped/motorcycle was involved.
+\end{itemize}
+
+\subsection{Ordinal Features (Ordered Categories)}
+\begin{itemize}
+    \item \textbf{\col{day_of_week}}: Day of the week, where Monday=0 and Sunday=6.
+    \item \textbf{\col{lighting_ordinal}}: A new ordinal scale for lighting conditions (risk-based).
+        \begin{itemize}
+            \item \texttt{0}: Good (Original: 1 - Full day)
+            \item \texttt{1}: Medium (Original: 5 - Night, light on)
+            \item \texttt{2}: Poor (Original: 2 - Twilight)
+            \item \texttt{3}: Very Poor (Original: 3, 4 - Night, light off/none)
+        \end{itemize}
+    \item \textbf{\col{weather_ordinal}}: A new ordinal scale for weather conditions (risk-based).
+        \begin{itemize}
+            \item \texttt{0}: Good (Original: 1 - Normal)
+            \item \texttt{1}: Okay (Original: 8 - Overcast)
+            \item \texttt{2}: Slight Risk (Original: 2 - Light rain, 7 - Dazzling)
+            \item \texttt{3}: Medium Risk (Original: 6 - Wind, 3 - Heavy rain)
+            \item \texttt{4}: High Risk (Original: 5 - Fog, 4 - Snow)
+        \end{itemize}
+    \item \textbf{\col{road_complexity_index}}: Index (scaled 0-10) assessing road complexity. Based on \col{intersection}, \col{road_category}, \col{traffic_regime}, and \col{number_of_traffic_lanes}. Higher value = more complex.
+    \item \textbf{\col{impact_score}}: Weighted score (0-6) based on \col{vehicle_category_simplified}. (e.g., Truck=6, Car=4, Bicycle=2, unknown=1).
+    \item \textbf{\col{impact_score_other}}: Weighted score (0-6) for the \textit{other} vehicle. (e.g., Truck=6, Car=4, n/a=0).
+    \item \textbf{\col{impact_delta}}: The \textit{directional} difference: \col{impact_score} - \col{impact_score_other}. A negative value implies higher risk (e.g., Car vs. Truck = 4 - 6 = -2).
+\end{itemize}
+
+\subsection{Numerical Features (Continuous)}
+\begin{itemize}
+    \item \textbf{\col{age}}: User's age at the time of the accident. Imputed with 0 if unknown.
+    \item \textbf{\col{hour_sin}} / \textbf{\col{hour_cos}}: Cyclical features (Sine/Cosine) for the hour of the day.
+    \item \textbf{\col{day_of_week_sin}} / \textbf{\col{day_of_week_cos}}: Cyclical features for the day of the week.
+    \item \textbf{\col{month_sin}} / \textbf{\col{month_cos}}: Cyclical features for the month.
+    \item \textbf{\col{day_of_year_sin}} / \textbf{\col{day_of_year_cos}}: Cyclical features for the day of the year.
 \end{itemize}
 
 \end{document}
+

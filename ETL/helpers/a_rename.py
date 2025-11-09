@@ -87,4 +87,52 @@ def rename_vehicles(df_vehicles: pd.DataFrame):
 
 
 def rename_users(df_users: pd.DataFrame):
-    return df_users.rename(columns=users_column_names)
+    """
+    Normalizes the schema for the users table.
+    Handles missing 'id_usager' in older files by creating a synthetic 'id_user'.
+    """
+    df_copy = df_users.copy()
+
+    # Define the key source columns from the dictionary
+    acc_key_source = 'Num_Acc'
+    user_key_source = 'id_usager'
+
+    # Get the target names from the dictionary
+    acc_key_target = users_column_names[acc_key_source]
+    user_key_target = users_column_names[user_key_source]
+
+    # Handle 'id_accident' (Num_Acc) first (needed for synthetic ID)
+    if acc_key_source in df_copy.columns:
+        df_copy.rename(columns={acc_key_source: acc_key_target}, inplace=True)
+    elif acc_key_target not in df_copy.columns:
+        # If 'Num_Acc' is also not present, we can't proceed.
+        raise ValueError(f"Source column '{acc_key_source}' (for 'id_accident') not found in users file.")
+
+    # Handle 'id_user' (id_usager) - real or synthetic
+    if user_key_source in df_copy.columns:
+        # Case 1: 2022+ data (has id_usager)
+        df_copy.rename(columns={user_key_source: user_key_target}, inplace=True)
+    else:
+        # Case 2: 2019/2020 data (missing id_usager)
+        # Create a unique index (1, 2, 3...) for each user within an accident group
+        df_copy.sort_index(inplace=True)
+        df_copy['user_index'] = df_copy.groupby(acc_key_target).cumcount() + 1
+
+        # Create a robust, unique string ID (e.g., "2019000001_U1")
+        df_copy[user_key_target] = df_copy[acc_key_target].astype(str) + '_U' + df_copy['user_index'].astype(str)
+
+        df_copy.drop(columns=['user_index'], inplace=True)
+
+    # Handle all OTHER renames from the dictionary
+    # Create a new map, excluding the ones we handled manually
+    other_renames = {
+        k: v for k, v in users_column_names.items()
+        if k not in [acc_key_source, user_key_source]  # Exclude 'Num_Acc' and 'id_usager'
+    }
+
+    # Rename only columns that exist in the dataframe
+    existing_renames = {k: v for k, v in other_renames.items() if k in df_copy.columns}
+    df_copy.rename(columns=existing_renames, inplace=True)
+
+    return df_copy
+
