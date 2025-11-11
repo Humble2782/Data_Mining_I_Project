@@ -30,7 +30,7 @@ columns_to_drop = [
     'injury_severity',
 
     # Other columns deemed not useful for modeling
-    'injured_pedestrian_alone', 'trip_purpose', 'direction_of_travel',
+    'injured_pedestrian_alone', 'trip_purpose', 'direction_of_travel', 'direction_of_travel_other',
     'carriageway_width',
 
     # Drop unrealistic/engineered secu equipment flags that are not needed

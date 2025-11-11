@@ -84,6 +84,34 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
     feature_selection_table = fs.select_features(imputed_table)
     print("Feature Selection complete.")
 
+    # --- Dtype Conversion ---
+    print("Converting final features to int16 for memory efficiency...")
+
+    # This list contains all columns you provided
+    columns_to_int16 = [
+        'location', 'type_of_collision', 'reserved_lane_present', 'horizontal_alignment',
+        'infrastructure', 'accident_situation', 'position', 'fixed_obstacle_struck',
+        'mobile_obstacle_struck', 'initial_point_of_impact', 'main_maneuver_before_accident',
+        'motor_type', 'fixed_obstacle_struck_other', 'mobile_obstacle_struck_other',
+        'initial_point_of_impact_other', 'main_maneuver_before_accident_other',
+        'motor_type_other', 'vehicle_category_involved_bicycle', 'vehicle_category_involved_bus_coach',
+        'vehicle_category_involved_hgv_truck', 'vehicle_category_involved_light_motor_vehicle',
+        'vehicle_category_involved_other', 'vehicle_category_involved_powered_2_3_wheeler',
+        'used_belt', 'used_helmet', 'used_child_restraint', 'used_airbag',
+        'impact_score', 'impact_score_other', 'impact_delta', 'surface_quality_indicator',
+        'lighting_ordinal', 'weather_ordinal', 'injury_target', 'sex', 'day_of_week', 'speed_limit', 'age'
+    ]
+
+    # Filter list to only include columns that survived feature selection
+    existing_cols_to_convert = [col for col in columns_to_int16 if col in feature_selection_table.columns]
+
+    # Perform the conversion
+    if existing_cols_to_convert:
+        feature_selection_table[existing_cols_to_convert] = feature_selection_table[existing_cols_to_convert].astype(
+            'int16')
+
+    print("Dtype conversion complete.")
+
     # --- Verification Step ---
     # Check for any NaNs that slipped through the targeted imputation
     remaining_nans = feature_selection_table.isnull().sum()

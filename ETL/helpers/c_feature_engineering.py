@@ -139,7 +139,7 @@ def create_vehicle_features(df: pd.DataFrame) -> pd.DataFrame:
 
         # 1. Assign and fill NaNs
         # A NaN here means "no other vehicle", so we use "n/a"
-        df_copy['vehicle_category_simplified_other'] = df_copy['vehicle_category_other'].fillna('n/a')
+        df_copy['vehicle_category_simplified_other'] = df_copy['vehicle_category_other'].fillna('none')
 
         # 2. Strip whitespace
         df_copy['vehicle_category_simplified_other'] = df_copy['vehicle_category_simplified_other'].astype(
