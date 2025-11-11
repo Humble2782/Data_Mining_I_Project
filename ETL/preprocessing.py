@@ -64,6 +64,7 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
 
     # --- Clean up impossible speed limits ---
     initial_rows = len(merged_table)
+    # France has a maximum speed limit of 130
     merged_table.drop(index=merged_table[merged_table['speed_limit'] > 130].index, inplace=True)
     rows_dropped = initial_rows - len(merged_table)
     if rows_dropped > 0:
@@ -151,19 +152,17 @@ def process_files(input_path: str, output_path: str = 'data'):
     files_path = glob.glob(f'{input_path}/*-*.csv')
     years = sorted(list(set(re.findall(r'-(\d{4})\.csv', ' '.join(files_path)))))
 
+    # --- Lists to hold the final dataframes ---
+    train_val_dfs = []
+    test_dfs = []
+    TEST_YEAR = '2023'  # Define your test year
+
     if not years:
         # Make the error message dynamic using the input_path
         print(f"No year-specific data files found in '{input_path}' directory.")
         print("Please ensure files are named like 'locations-2022.csv'.")
     else:
         print(f"Found data for years: {years}")
-
-        # --- Define the test year ---
-        TEST_YEAR = '2023'  # All other years will be used for training/validation
-
-        # --- Lists to hold the final, processed DataFrames ---
-        train_val_dfs = []
-        test_dfs = []
 
         # Create the output path if not existent
         try:
@@ -180,15 +179,20 @@ def process_files(input_path: str, output_path: str = 'data'):
         for year in years:
             try:
                 print(f"Processing data for year: {year}")
-                df_circumstances = pd.read_csv(f'{input_path}/characteristics-{year}.csv', sep=';', decimal=',', low_memory=False)
+                df_circumstances = pd.read_csv(f'{input_path}/characteristics-{year}.csv', sep=';', decimal=',',
+                                               low_memory=False)
                 df_locations = pd.read_csv(f'{input_path}/locations-{year}.csv', sep=';', decimal=',', low_memory=False)
                 df_users = pd.read_csv(f'{input_path}/users-{year}.csv', sep=';', decimal=',', low_memory=False)
                 df_vehicles = pd.read_csv(f'{input_path}/vehicles-{year}.csv', sep=';', decimal=',', low_memory=False)
 
                 results: AccidentPreprocessingResult = process_year(df_circumstances, df_locations, df_users,
                                                                     df_vehicles)
-                folders = results.keys()
 
+                # --- Get the final dataframe for this year ---
+                final_df_year = results['F_feature_selection']
+
+                # --- Save intermediate (per-year) files ---
+                folders = results.keys()
                 for folder_name in folders:
                     folder_path = output_path / folder_name
                     folder_path.mkdir(exist_ok=True)
@@ -208,16 +212,12 @@ def process_files(input_path: str, output_path: str = 'data'):
                         file_path: Path = folder_path / f'{filename_base}-{year}.csv'
                         results[folder_name].to_csv(file_path, sep=';', index=False)
 
-                print(f"Successfully processed and saved data for year {year}")
+                print(f"Successfully processed and saved intermediate data for year {year}")
 
-                # --- Add the final processed DataFrame to the correct list ---
-                final_df_year = results['F_feature_selection']
-
+                # --- Append the final dataframe to the correct list ---
                 if year == TEST_YEAR:
-                    print(f"  ...Adding year {year} to TEST set.")
                     test_dfs.append(final_df_year)
                 else:
-                    print(f"  ...Adding year {year} to TRAIN/VAL set.")
                     train_val_dfs.append(final_df_year)
 
             except FileNotFoundError as e:
@@ -228,24 +228,53 @@ def process_files(input_path: str, output_path: str = 'data'):
             except Exception as e:
                 print(f'An unexpected Exception occured: {e}')
 
-        # --- After the loop, combine and save the final datasets ---
-        print("\nCombining and saving final train/test datasets...")
+    # --- After the loop, combine and save the final datasets in all formats ---
+    print("\nCombining and saving final train/test datasets (CSV, Parquet, and Zipped CSV)...")
 
-        if train_val_dfs:
-            train_val_combined = pd.concat(train_val_dfs, ignore_index=True)
-            train_val_path = output_path / 'train_val_data.csv'
-            train_val_combined.to_csv(train_val_path, sep=';', index=False)
-            print(f"Successfully saved combined train/val data to: {train_val_path}")
-        else:
-            print("Warning: No training/validation data was processed.")
+    if train_val_dfs:
+        train_val_combined = pd.concat(train_val_dfs, ignore_index=True)
 
-        if test_dfs:
-            test_combined = pd.concat(test_dfs, ignore_index=True)  # Concat handles list of one
-            test_path = output_path / 'test_data.csv'
-            test_combined.to_csv(test_path, sep=';', index=False)
-            print(f"Successfully saved combined test data to: {test_path}")
-        else:
-            print(f"Warning: No test data for year {TEST_YEAR} was processed.")
+        # Define paths
+        train_val_path_csv = output_path / 'train_val_data.csv'
+        train_val_path_parquet = output_path / 'train_val_data.parquet'
+        train_val_path_csv_zip = output_path / 'train_val_data.csv.zip'
+
+        # Save as CSV
+        train_val_combined.to_csv(train_val_path_csv, sep=';', index=False)
+        # Save as Parquet
+        train_val_combined.to_parquet(train_val_path_parquet, index=False, engine='pyarrow')
+        # Save as Zipped CSV
+        train_val_combined.to_csv(train_val_path_csv_zip, sep=';', index=False, compression='zip')
+
+        print(f"Successfully saved combined train/val data to:")
+        print(f"  - {train_val_path_csv}")
+        print(f"  - {train_val_path_parquet}")
+        print(f"  - {train_val_path_csv_zip} (Compressed)")
+    else:
+        print(f"Warning: No train/val data was processed.")
+
+    if test_dfs:
+        test_combined = pd.concat(test_dfs, ignore_index=True)  # Concat handles list of one
+
+        # Define paths
+        test_path_csv = output_path / 'test_data.csv'
+        test_path_parquet = output_path / 'test_data.parquet'
+        test_path_csv_zip = output_path / 'test_data.csv.zip'
+
+        # Save as CSV
+        test_combined.to_csv(test_path_csv, sep=';', index=False)
+        # Save as Parquet
+        test_combined.to_parquet(test_path_parquet, index=False, engine='pyarrow')
+        # Save as Zipped CSV
+        test_combined.to_csv(test_path_csv_zip, sep=';', index=False, compression='zip')
+
+        print(f"Successfully saved combined test data to:")
+        print(f"  - {test_path_csv}")
+        print(f"  - {test_path_parquet}")
+        print(f"  - {test_path_csv_zip} (Compressed)")  #
+    else:
+        print(f"Warning: No test data for year {TEST_YEAR} was processed.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

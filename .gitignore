@@ -516,3 +516,4 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,jupyternotebooks,latex
 data/train_val_data.csv
+data/test_data.csv.zip
