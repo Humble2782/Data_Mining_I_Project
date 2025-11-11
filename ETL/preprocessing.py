@@ -62,6 +62,14 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         .merge(vehicle_categories_involved_processed, on='id_accident', how='left')
     )
 
+    # --- Clean up impossible speed limits ---
+    initial_rows = len(merged_table)
+    merged_table.drop(index=merged_table[merged_table['speed_limit'] > 130].index, inplace=True)
+    rows_dropped = initial_rows - len(merged_table)
+    if rows_dropped > 0:
+        # This print statement helps with debugging
+        print(f"  ...Dropped {rows_dropped} rows with speed_limit > 130.")
+
     # --- Feature Engineering Pipeline ---
     print(f"Starting Feature Engineering for year {df_circumstances_renamed['year'].iloc[0]}...")
     feature_engineering_table = fe.create_datetime_features(merged_table)
@@ -150,6 +158,13 @@ def process_files(input_path: str, output_path: str = 'data'):
     else:
         print(f"Found data for years: {years}")
 
+        # --- Define the test year ---
+        TEST_YEAR = '2023'  # All other years will be used for training/validation
+
+        # --- Lists to hold the final, processed DataFrames ---
+        train_val_dfs = []
+        test_dfs = []
+
         # Create the output path if not existent
         try:
             output_path: Path = Path(output_path)
@@ -195,6 +210,16 @@ def process_files(input_path: str, output_path: str = 'data'):
 
                 print(f"Successfully processed and saved data for year {year}")
 
+                # --- Add the final processed DataFrame to the correct list ---
+                final_df_year = results['F_feature_selection']
+
+                if year == TEST_YEAR:
+                    print(f"  ...Adding year {year} to TEST set.")
+                    test_dfs.append(final_df_year)
+                else:
+                    print(f"  ...Adding year {year} to TRAIN/VAL set.")
+                    train_val_dfs.append(final_df_year)
+
             except FileNotFoundError as e:
                 print(f"Skipping year {year} due to missing file: {e}")
             except PermissionError:
@@ -203,6 +228,24 @@ def process_files(input_path: str, output_path: str = 'data'):
             except Exception as e:
                 print(f'An unexpected Exception occured: {e}')
 
+        # --- After the loop, combine and save the final datasets ---
+        print("\nCombining and saving final train/test datasets...")
+
+        if train_val_dfs:
+            train_val_combined = pd.concat(train_val_dfs, ignore_index=True)
+            train_val_path = output_path / 'train_val_data.csv'
+            train_val_combined.to_csv(train_val_path, sep=';', index=False)
+            print(f"Successfully saved combined train/val data to: {train_val_path}")
+        else:
+            print("Warning: No training/validation data was processed.")
+
+        if test_dfs:
+            test_combined = pd.concat(test_dfs, ignore_index=True)  # Concat handles list of one
+            test_path = output_path / 'test_data.csv'
+            test_combined.to_csv(test_path, sep=';', index=False)
+            print(f"Successfully saved combined test data to: {test_path}")
+        else:
+            print(f"Warning: No test data for year {TEST_YEAR} was processed.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
