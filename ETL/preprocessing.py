@@ -147,8 +147,7 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         'C_merged': merged_table,
         'D_feature_engineering': feature_engineering_table,
         'E_missing_data_handling': imputed_table,
-        'F_feature_selection': feature_selection_table,
-        'G_clustering': clustered_table
+        'F_feature_selection': clustered_table
     }
 
 
