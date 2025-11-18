@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+from kmodes.kprototypes import KPrototypes
 
 
 def create_datetime_features(df_merged: pd.DataFrame):
@@ -336,5 +337,31 @@ def create_ordinal_target(df_merged: pd.DataFrame) -> pd.DataFrame:
 
     # Note: The original 'injury_severity' column will be
     # dropped in the d_feature_selection step.
+
+    return df_copy
+
+def create_cluster_feature(df_merged: pd.DataFrame) -> pd.DataFrame:
+    df_copy = df_merged.copy()
+    num_cols = ['latitude', 'longitude', 'speed_limit', 'age', 'hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos', "month_sin", "month_cos", "day_of_year_sin", "day_of_year_cos"]
+    ord_cols = ['lighting_ordinal', 'weather_ordinal', 'road_complexity_index', 'impact_score', 'impact_score_other', 'impact_delta']
+    cat_cols = []
+    
+    for col in df_copy.columns:
+        if col not in num_cols and col not in ord_cols:
+            cat_cols.append(col)
+            df_copy[col] = df_copy[col].astype(str)
+    cat_indices = [df_copy.columns.get_loc(col) for col in cat_cols]
+    df_np = df_copy.to_numpy()
+    
+    kproto = KPrototypes(
+        n_clusters=3,
+        init='Huang',
+        n_init=5,
+        verbose=1,
+        random_state=42
+    )
+
+    clusters = kproto.fit_predict(df_np, categorical=cat_indices)
+    df_copy['cluster'] = clusters
 
     return df_copy
