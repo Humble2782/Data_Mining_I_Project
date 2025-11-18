@@ -113,6 +113,85 @@ Binary variables indicating the use of protective gear (seatbelts, helmets) or t
 The engineered ordinal target variable classifying injury severity into three levels: 0 (Uninjured), 1 (Lightly Injured), and 2 (Hospitalized or Dead).
 \end{description}
 
+\section{Preprocessing}
+
+\subsection{Data Merging}
+
+Given the nature of the "Annual Road Traffic Injury Database" as a raw database output provided by OSNIR in multiple separate tables with existing many-to-one relationships between them, extensive preprocessing procedures, besides the renaming of columns to English equivalents, needed to be implemented to arrive at a singular tabular representation, compatible with our chosen data mining models.
+
+While accidents in the dataset are uniquely identified via an ID column in each table easing the process, strategies to merge the information contained in the multiple rows stilled needed to applied. A naive encoding using additional columns for every entry was deemed infeasible due to the variance in relation counts observed. Instead, a user-centric view representing the accident from the perspective of each participant was adapted. 
+
+Adopting this approach, using the user table as basis for data frame merging, meant that the many-to-one relation between the general accident circumstances and the users could be resolved via a simple join operation, as the perspective of each participant were to be treated independently of each other. While initially sparking concerns regarding overfitting and data leakage, both were addressed through starkly differing injury scores between participants of the same accident and a temporal split for the test data. 
+
+Since every participant can at most be related to one vehicle, a left join of the data suffices per individual, but looses valuable information regarding the vehicles involved in the accident as a whole. This data however is crucial for data mining models as the risk of injury for a specific participant is directly correlated with their position in it. As an example for this correlation, a pedestrian being hit by a truck will have a higher risk of injury compared to one being hit by a bike. To capture this information per single row, new features were engineered. While the first captures the number of vehicles types involved in a particular accident, the second contains the vehicle information pertaining to the "antagonist" of the participant, defined as either the vehicle a pedestrian was hit by, which is explicitly reported in the dataset, or as the most impactful vehicle of a different participant. As an example, if choosing between a bike and a truck, the truck will be considered the "antagonist".
+
+Contrary to the dataset description provided by OSNIR, multiple location entries were found to correspond to the same accident entries. Analysis revealed that this artifact correlated with the presence of intersections, forming the theory that first responders entered all streets intersecting at this location instead of only the main road. A spot-check of randomly selected accident GPS location data also seems to support this. Since all location entries are thus valid, one of the available location entries is selected during merging based on the completeness of the entry. 
+
+\subsection{Feature Selection \& Data Cleaning}
+
+Besides the many-to-one anomalies observed in the raw dataset during the previous step, attribute values themselves also exhibited irregularities that needed to be removed. The anomalies observed can be categorized into three types: missing, invalid and irrelevant values. 
+
+\subsubsection{Missing \& Irrelevant Values}
+
+Missing Values in the raw dataset are denoted by either empty cells or the value "-1". Since their presence, according to the official documentation, is sometimes used to encode special meaning depending on the attribute in question (e.g. NA values for sex and birth year for hit-and-run drivers), special care needed to be taken to evaluate each attribute individually. 
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.2\textwidth}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Category} & \textbf{Columns} \\
+\midrule
+Special meaning & \texttt{year\_of\_birth}, \texttt{sex} \\ \hline
+IDs and high-cardinality identifiers & \texttt{id\_accident}, \texttt{id\_vehicle}, \texttt{id\_user}, \texttt{number\_vehicle}, \texttt{department\_code}, \texttt{commune\_code}, \texttt{postal\_address}, \texttt{road\_number}, \texttt{road\_number\_index}, \texttt{road\_number\_letter}, \texttt{latitude}, \texttt{longitude}\\ \hline
+Little information / Many missing values & \texttt{width\_central\_reservation}, \texttt{nearest\_reference\_marker\_distance}, \texttt{nearest\_reference\_marker}, \texttt{carriageway\_width}, \texttt{number\_occupants\_in\_public\_transport} \\ \hline
+Use Case & \texttt{injured\_pedestrian\_alone}, \texttt{trip\_purpose}, \texttt{pedestrian\_location}, \texttt{pedestrian\_action} \\ 
+\bottomrule
+\end{tabularx}
+\caption{Attributes with Special Meaning and Dropped Columns}
+\label{Dropped_Columns}
+\end{table}
+
+\autoref{Dropped_Columns} offers an overview over the handling of specific attribute missing values. While the category "Little information / Many missing values" drops columns with significant gaps in knowledge (e.g. carriageway\_width with \textgreater50\%), columns pertaining to the use case are eliminated as they are not realistically available in the case of real time prediction. In addition, IDs and highly unique attributes are removed as patterns applicable for classification are unlikely to be inferred from them. 
+
+\subsubsection{Invalid Values}
+
+Analysis of the dataset revealed attributes that contained anomalous values. While the attribute \texttt{number\_of\_traffic\_lanes} contained cells with the value \texttt{\#VALEURMULTI}, an artifact from the database export, speed limits above the legal maximum (\textgreater140) were also observed, necessitating removal. Besides the dropping of rows, whitespace in attributes such as IDs were also removed for more efficient merging.
+
+
+%  # IDs and high-cardinality identifiers
+%     'id_accident', 'id_vehicle', 'id_user', 'number_vehicle', 'department_code',
+%     'commune_code', 'postal_address', 'road_number', 'road_number_index',
+%     'road_number_letter'
+
+
+% # little information and a lot of missing values
+%     'width_central_reservation', 'number_occupants_in_public_transport',
+%     'number_occupants_in_public_transport_other',
+%     'nearest_reference_marker_distance', 'nearest_reference_marker',
+
+%     # Other columns deemed not useful for modeling
+%     'injured_pedestrian_alone', 'trip_purpose', 'direction_of_travel', 'direction_of_travel_other',
+%     'carriageway_width',
+
+%    # Drop unrealistic/engineered secu equipment flags that are not needed
+%     'used_other', 'used_gloves', 'used_reflective_vest',
+
+% 'id_accident', 'day','month','year', 'hour_minute','lighting_condition','department_code','commune_code','location','intersection','weather_condition','type_of_collision','postal_address','latitude','longitude'
+
+
+% id_accident', 'road_category', 'road_number','road_number_index','road_number_letter','traffic_regime', 'number_of_traffic_lanes','reserved_lane_present','longitudinal_profile','nearest_reference_marker''nearest_reference_marker_distance','horizontal_alignment', 'width_central_reservation','carriageway_width','pavement_condition','infrastructure','accident_situation','speed_limit'
+
+% 'id_accident','id_vehicle','number_vehicle','direction_of_travel','vehicle_category','fixed_obstacle_struck','mobile_obstacle_struck','initial_point_of_impact','main_maneuver_before_accident','motor_type', 'number_occupants_in_public_transport'
+
+% 'id_accident','id_user','id_vehicle','number_vehicle','position','user_category','injury_severity', 'sex','year_of_birth', 'trip_purpose', 'safety_equipment_1','safety_equipment_2','safety_equipment_3','pedestrian_location', 'pedestrian_action','injured_pedestrian_alone'
+
+
+
+\subsection{Feature Engineering}
+
+
+
+
 \section{Preprocessing (1 page min)}
 
 Our primary task is to predict the injury severity for each individual involved in an accident. The \textbf{target variable} is the ordinal \texttt{grav} feature, categorized into four classes of increasing severity: \textbf{Not Injured, Lightly Injured, Severely Injured, and Killed}. This individual-level approach directly addresses the relational data structure and allows the use of user-specific features.
