@@ -1,0 +1,155 @@
+% Do not change document class, margins, fonts, etc.
+\documentclass[a4paper,oneside,bibliography=totoc]{scrbook}
+
+% some useful packages (add more as needed)
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{algorithm} % you can modify the algorithm style to your liking
+\counterwithin{algorithm}{chapter} % so that algorithms have chapter numbers as well
+\usepackage{algorithmic}
+\usepackage{csquotes}
+\usepackage{enumitem}
+\renewcommand{\algorithmiccomment}[1]{\hfill\textit{// #1}}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[colorlinks,citecolor=Green]{hyperref} % you may change/remove the colors
+\usepackage{lipsum} % you do not need this
+
+% \us prints an underscore (_) and allows a line break afterwards.
+% \sls prints a slash (/) and allows a line break afterwards.
+\newcommand{\us}{\_\allowbreak}
+\newcommand{\sls}{/\allowbreak}
+
+% chicago citation style
+\usepackage{natbib}
+\bibliographystyle{chicagoa}
+\setcitestyle{authoryear,round,semicolon,aysep={},yysep={,}} \let\cite\citep
+
+% example enviroments (add more as needed)
+\newtheorem{definition}{Definition} \newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+
+% Quick fix to remove the 0 in front of sections.
+\makeatletter
+\renewcommand\thesection{\arabic{section}}
+\renewcommand\thesubsection{\arabic{section}.\arabic{subsection}}
+\renewcommand\thesubsubsection{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+\makeatother
+
+
+
+\frontmatter \subject{Project Report} % change to appropriate type
+\title{Predicting Injury Severity in Road Accidents: A Real-Time Classification Approach}
+\author{
+  David Cebulla (1922129)\\
+  Gabriel Himmelein (1649181)\\
+  Lukas Ott (1842341)\\
+  Artur Loreit (2268917)\\
+  Aaron Niemesch (1836924)
+} \date{November 23, 2025}
+\publishers{{\small Submitted to}\\
+  Data and Web Science Group\\
+  Dr.\ Sven Hertling\\
+  University of Mannheim\\}
+\maketitle
+
+% none of the things below is needed, but you may add them if you feel that they
+% are helpful for your work \listofalgorithms \listoffigures \listoftables
+% \listtheorems{definition} \listtheorems{proposition}
+
+
+% okay, start new numbering ... here is where it really starts
+\mainmatter
+
+\section{Application Area and Goals (0.5 pages)}
+
+Modern assistive technologies in vehicles, such as the mandatory eCall system, automatically transmit accident data to emergency services. While this data includes location and passenger numbers, it lacks information on injury severity: a critical gap for first responders. The French National Interministerial Observatory for Road Safety (ONISR) database contains incident severity information concluded up to 30 days post-accident. Using this data as a baseline, our goal is to develop a classifier that can predict injury severity in real-time, helping first responders to take appropriate and timely precautions.
+
+\section{Structure and Size of the Data Set (1 page min)}
+
+Our analysis uses the "Annual Road Traffic Injury Databases" from 2019-2023, provided by ONISR. The data is supplied in four files per year (characteristics, locations, users, and vehicles) and includes features such as road conditions, weather, and user information. Recognizing the one-to-many relationship where each accident involves multiple participants, we defined our unit of analysis at the \textbf{individual level}. The \texttt{users} table serves as the base for our dataset.
+
+TODO: Size of one year and size of training/val and test set.
+
+The features we have selected are listed below. They are categorized into Original Features (retained from raw data) and Engineered Features (calculated to model complex relationships). The final dataset consists of \textbf{56 features}, comprising \textbf{23 original columns} retained from the raw data and \textbf{33 engineered features} calculated to model complex relationships.
+
+\begin{description}[leftmargin=0pt]
+\item[Time context] \hfill \\
+{\raggedright \small\texttt{\{time\us of\us day, hour\us sin\sls cos, day\us of\us week\us sin\sls cos, month\us sin\sls cos, day\us of\us year\us sin\sls cos\}} \par}
+Captures seasonality and daily patterns using cyclical sine/cosine transformations for time units. Also includes \texttt{time\us of\us day}, which groups hours into broader categories (e.g., Night, Rush Hour).
+
+\item[Geospatial location] \hfill \\
+{\raggedright \small\texttt{\{latitude, longitude\}} \par}
+GPS coordinates (WGS84) utilized for spatial analysis and mapping.
+
+\item[Environment \& Roadway] \hfill \\
+{\raggedright \small\texttt{\{lighting\us ordinal, weather\us ordinal, location, infrastructure, accident\us situation, horizontal\us alignment, reserved\us lane\us present, speed\us limit, road\us complexity\us index, surface\us quality\us indicator\}} \par}
+Combines physical site attributes (urban/rural status, alignment, infrastructure type) with risk-based ordinals for lighting and weather. Engineered indices quantify road complexity (0--10 scale) and surface quality.
+
+\item[Crash dynamics \& Maneuvers] \hfill \\
+{\raggedright \small\texttt{\{type\us of\us collision, initial\us point\us of\us impact, fixed\us obstacle\us struck, mobile\us obstacle\us struck, main\us maneuver\us before\us accident, impact\us score, impact\us delta\}} \par}
+Describes the collision mechanics, including maneuvers, impact points, and obstacles. Derived metrics like \texttt{impact\us score} and \texttt{impact\us delta} quantify the relative risk based on vehicle size differences.
+
+\item[Vehicle attributes \& Involvement] \hfill \\
+{\raggedright \small\texttt{\{motor\us type, vehicle\us category\us simplified, vehicle\us category\us involved\us [type]\}} \par}
+Specifies the primary vehicle's type and motorization. Includes binary flags indicating if specific other vehicle types (e.g., heavy trucks, bicycles, buses) were involved in the accident.
+
+\item[Personal attributes] \hfill \\
+{\raggedright \small\texttt{\{role, sex, age, age\us group, position, pedestrian\us location, pedestrian\us action\}} \par}
+Covers demographic data (age, sex), the user's role (driver, passenger, pedestrian), seating position, and specific actions or locations for pedestrians at the time of the accident.
+
+\item[Safety equipment usage] \hfill \\
+{\raggedright \small\texttt{\{used\us belt, used\us helmet, used\us child\us restraint, used\us airbag\}} \par}
+Binary variables indicating the use of protective gear (seatbelts, helmets) or the deployment of airbags.
+
+\item[Target / Outcome] \hfill \\
+{\raggedright \small\texttt{\{injury\us target\}} \par}
+The engineered ordinal target variable classifying injury severity into three levels: 0 (Uninjured), 1 (Lightly Injured), and 2 (Hospitalized or Dead).
+\end{description}
+
+\section{Preprocessing (1 page min)}
+
+Our primary task is to predict the injury severity for each individual involved in an accident. The \textbf{target variable} is the ordinal \texttt{grav} feature, categorized into four classes of increasing severity: \textbf{Not Injured, Lightly Injured, Severely Injured, and Killed}. This individual-level approach directly addresses the relational data structure and allows the use of user-specific features.
+
+For each user, we merged the corresponding accident characteristics, location, and vehicle information using the \texttt{Num\_Acc} key. For users without an associated vehicle, such as pedestrians, vehicle-specific features are handled as a distinct 'Not Applicable' category, creating a comprehensive record for every individual.
+
+We use a chronological train-test split, with 2019-2022 data for training and 2023 for testing. For hyperparameter optimization, we will use a \textbf{GroupKFold} cross-validation strategy with the accident ID (\texttt{Num\_Acc}) as the group identifier. This ensures that participants from a single accident remain in the same fold, which handles their non-independence and leads to a more robust model evaluation.
+
+Key preprocessing steps will include:
+\begin{itemize}
+    \item \textbf{Real-Time Feature Selection}: A rigorous selection to prevent data leakage by exclusively using features available immediately at the accident scene.
+    \item \textbf{Inter-Vehicle Feature Engineering}: To account for interactions between vehicles, we will engineer features summarizing the context of other parties involved, such as the number and types of other vehicles (e.g., 'truck\_involved', 'motorcycle\_involved').
+    \item \textbf{Handling Class Imbalance}: Our primary strategy is using the built-in \texttt{class\_weight} model parameter. If needed, we will explore advanced oversampling techniques like SMOTE as a secondary step.
+    \item \textbf{Data Cleaning and Formatting}: This includes consistent handling of null values, correcting input errors, and formatting time fields.
+\end{itemize}
+
+\section{Data Mining}
+
+Our methodology integrates unsupervised and supervised learning, with clustering serving as a key step in feature engineering. After applying PCA, we will use \textbf{K-Means Clustering} and \textbf{DBSCAN} on the principal components to identify "accident personas." We will ensure these clusters are interpretable through "cluster profiling" with the original features. The resulting cluster assignments may then be engineered into a new categorical feature to potentially enhance our classification models.
+
+Subsequently, we will train and evaluate several \textbf{supervised classification models}, prioritizing those that can leverage the ordinal nature of our target variable:
+\begin{itemize}
+    \item \textbf{Ordinal Logistic Regression}: An interpretable statistical baseline that respects the ordinal data structure.
+    \item A \textbf{Random Forest Classifier} and \textbf{Gradient Boosting} (e.g., XGBoost): Powerful ensemble models for high performance and feature importance rankings.
+    \item \textbf{Ordinal Forest}: A specialized version of the Random Forest designed for ordinal outcomes, which we will compare against the standard implementation.
+\end{itemize}
+
+This selection allows us to test if ordinal-aware models provide an advantage. Finally, a \textbf{Feature Importance Analysis} using the tree-based models will provide a data-driven ranking of significant risk factors.
+
+\section{Evaluation}
+
+For clustering, success will be measured by the \textbf{Silhouette Score} and a qualitative review of the interpretability of the identified "accident scenarios."
+
+For classification, all models must significantly outperform a \textbf{"Most Frequent Class"} baseline. As simple accuracy is an insufficient metric for our skewed data, our evaluation will be based on a suite of metrics. We will use \textbf{confusion matrices} for error analysis and the \textbf{weighted F1-Score} to balance precision and recall. Given the ordinal nature of the target variable, we will also use metrics that penalize distant errors more heavily, such as \textbf{Weighted Cohen's Kappa}. For visualization, we will primarily generate \textbf{Precision-Recall Curves}, which are well-suited for imbalanced data.
+
+\section{Results}
+
+Our primary goal is to create a model capable of classifying injury severity to a satisfactory degree. We expect the clustering analysis to uncover specific, evidence-based "accident personas," such as low-speed urban collisions, high-velocity rural incidents, and collisions involving vulnerable road users. From the feature importance analysis, we expect to confirm that vehicle type (motorcycle vs. car) is a dominant predictor of severe injury. We also anticipate that factors like road category, lighting conditions, driver's age, and the use of safety equipment will be highly significant in predicting an individual's outcome.
+
+\end{document}

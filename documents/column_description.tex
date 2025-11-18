@@ -249,7 +249,7 @@ These columns are loaded from the raw data, renamed, and are retained after all 
             \item \texttt{6}: Other
         \end{itemize}
     
-    \item \textbf{\col{direction_of_travel_other}}, \textbf{\col{fixed_obstacle_struck_other}}, \textbf{\col{mobile_obstacle_struck_other}}, \textbf{\col{initial_point_of_impact_other}}, \textbf{\col{main_maneuver_before_accident_other}}, \textbf{\col{motor_type_other}}:
+    \textbf{\col{fixed_obstacle_struck_other}}, \textbf{\col{mobile_obstacle_struck_other}}, \textbf{\col{initial_point_of_impact_other}}, \textbf{\col{main_maneuver_before_accident_other}}, \textbf{\col{motor_type_other}}:
     \textit{Note on \col{_other} columns:} These features describe the \textbf{highest-impact "other" vehicle} involved in the accident (determined in \texttt{b\_merge\_tables.py}). They follow the same code definitions as their primary counterparts. In \texttt{d\_handle\_missing\_values.py}, \texttt{NaN} values are imputed with \textbf{\texttt{-1}} (N/A) if no second vehicle was involved, or \textbf{\texttt{0}} (Unknown) if a second vehicle was present but the data was missing.
 
 \end{itemize}
@@ -296,7 +296,7 @@ These columns are newly calculated in \texttt{c\_feature\_engineering.py} or \te
             \item \texttt{'other'}: (Imputed value)
         \end{itemize}
     \item \textbf{\col{vehicle_category_simplified}}: Simplified vehicle category for the primary vehicle. (e.g., \texttt{'light\_motor\_vehicle'}, \texttt{'hgv\_truck'}, \texttt{'bicycle'}, \texttt{'unknown'}, etc.)
-    \item \textbf{\col{vehicle_category_simplified_other}}: Simplified vehicle category for the \textit{other} vehicle. (Includes \texttt{'n/a'} for no other vehicle).
+    \item \textbf{\col{vehicle_category_simplified_other}}: Simplified vehicle category for the \textit{other} vehicle. (Includes \texttt{'none'} for no other vehicle).
     \item \textbf{\col{used_belt}}: (Binary) 1 if user used a seatbelt, 0 otherwise.
     \item \textbf{\col{used_helmet}}: (Binary) 1 if user used a helmet, 0 otherwise.
     \item \textbf{\col{used_child_restraint}}: (Binary) 1 if a child restraint was used, 0 otherwise.

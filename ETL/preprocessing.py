@@ -61,6 +61,15 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         .merge(vehicle_categories_involved_processed, on='id_accident', how='left')
     )
 
+    # --- Clean up impossible speed limits ---
+    initial_rows = len(merged_table)
+    # France has a maximum speed limit of 130
+    merged_table.drop(index=merged_table[merged_table['speed_limit'] > 130].index, inplace=True)
+    rows_dropped = initial_rows - len(merged_table)
+    if rows_dropped > 0:
+        # This print statement helps with debugging
+        print(f"  ...Dropped {rows_dropped} rows with speed_limit > 130.")
+
     # --- Feature Engineering Pipeline ---
     print(f"Starting Feature Engineering for year {df_circumstances_renamed['year'].iloc[0]}...")
     feature_engineering_table = fe.create_datetime_features(merged_table)
@@ -83,9 +92,41 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
     feature_selection_table = fs.select_features(imputed_table)
     print("Feature Selection complete.")
 
+    # --- Add cluster column ---
+    print("Starting clustering...")
+    clustered_table = fe.create_cluster_feature(feature_selection_table)
+
+    # --- Dtype Conversion ---
+    print("Converting final features to int16 for memory efficiency...")
+
+    # This list contains all columns you provided
+    columns_to_int16 = [
+        'location', 'type_of_collision', 'reserved_lane_present', 'horizontal_alignment',
+        'infrastructure', 'accident_situation', 'position', 'fixed_obstacle_struck',
+        'mobile_obstacle_struck', 'initial_point_of_impact', 'main_maneuver_before_accident',
+        'motor_type', 'fixed_obstacle_struck_other', 'mobile_obstacle_struck_other',
+        'initial_point_of_impact_other', 'main_maneuver_before_accident_other',
+        'motor_type_other', 'vehicle_category_involved_bicycle', 'vehicle_category_involved_bus_coach',
+        'vehicle_category_involved_hgv_truck', 'vehicle_category_involved_light_motor_vehicle',
+        'vehicle_category_involved_other', 'vehicle_category_involved_powered_2_3_wheeler',
+        'used_belt', 'used_helmet', 'used_child_restraint', 'used_airbag',
+        'impact_score', 'impact_score_other', 'impact_delta', 'surface_quality_indicator',
+        'lighting_ordinal', 'weather_ordinal', 'injury_target', 'sex', 'day_of_week', 'speed_limit', 'age', 'cluster'
+    ]
+
+    # Filter list to only include columns that survived feature selection
+    existing_cols_to_convert = [col for col in columns_to_int16 if col in clustered_table.columns]
+
+    # Perform the conversion
+    if existing_cols_to_convert:
+        clustered_table[existing_cols_to_convert] = clustered_table[existing_cols_to_convert].astype(
+            'int16')
+
+    print("Dtype conversion complete.")
+
     # --- Verification Step ---
     # Check for any NaNs that slipped through the targeted imputation
-    remaining_nans = feature_selection_table.isnull().sum()
+    remaining_nans = clustered_table.isnull().sum()
     remaining_nans = remaining_nans[remaining_nans > 0]  # Filter for columns that still have NaNs
 
     if not remaining_nans.empty:
@@ -105,7 +146,7 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         'C_merged': merged_table,
         'D_feature_engineering': feature_engineering_table,
         'E_missing_data_handling': imputed_table,
-        'F_feature_selection': feature_selection_table
+        'F_feature_selection': clustered_table
     }
 
 
@@ -113,6 +154,11 @@ def process_files(input_path: str, output_path: str = 'data'):
     # Use the input_path argument instead of a hardcoded string
     files_path = glob.glob(f'{input_path}/*-*.csv')
     years = sorted(list(set(re.findall(r'-(\d{4})\.csv', ' '.join(files_path)))))
+
+    # --- Lists to hold the final dataframes ---
+    train_val_dfs = []
+    test_dfs = []
+    TEST_YEAR = '2023'  # Define your test year
 
     if not years:
         # Make the error message dynamic using the input_path
@@ -136,15 +182,20 @@ def process_files(input_path: str, output_path: str = 'data'):
         for year in years:
             try:
                 print(f"Processing data for year: {year}")
-                df_circumstances = pd.read_csv(f'{input_path}/characteristics-{year}.csv', sep=';', decimal=',', low_memory=False)
+                df_circumstances = pd.read_csv(f'{input_path}/characteristics-{year}.csv', sep=';', decimal=',',
+                                               low_memory=False)
                 df_locations = pd.read_csv(f'{input_path}/locations-{year}.csv', sep=';', decimal=',', low_memory=False)
                 df_users = pd.read_csv(f'{input_path}/users-{year}.csv', sep=';', decimal=',', low_memory=False)
                 df_vehicles = pd.read_csv(f'{input_path}/vehicles-{year}.csv', sep=';', decimal=',', low_memory=False)
 
                 results: AccidentPreprocessingResult = process_year(df_circumstances, df_locations, df_users,
                                                                     df_vehicles)
-                folders = results.keys()
 
+                # --- Get the final dataframe for this year ---
+                final_df_year = results['F_feature_selection']
+
+                # --- Save intermediate (per-year) files ---
+                folders = results.keys()
                 for folder_name in folders:
                     folder_path = output_path / folder_name
                     folder_path.mkdir(exist_ok=True)
@@ -164,7 +215,13 @@ def process_files(input_path: str, output_path: str = 'data'):
                         file_path: Path = folder_path / f'{filename_base}-{year}.csv'
                         results[folder_name].to_csv(file_path, sep=';', index=False)
 
-                print(f"Successfully processed and saved data for year {year}")
+                print(f"Successfully processed and saved intermediate data for year {year}")
+
+                # --- Append the final dataframe to the correct list ---
+                if year == TEST_YEAR:
+                    test_dfs.append(final_df_year)
+                else:
+                    train_val_dfs.append(final_df_year)
 
             except FileNotFoundError as e:
                 print(f"Skipping year {year} due to missing file: {e}")
@@ -173,6 +230,53 @@ def process_files(input_path: str, output_path: str = 'data'):
                 return
             #except Exception as e:
              #   print(f'An unexpected Exception occured: {e}')
+
+    # --- After the loop, combine and save the final datasets in all formats ---
+    print("\nCombining and saving final train/test datasets (CSV, Parquet, and Zipped CSV)...")
+
+    if train_val_dfs:
+        train_val_combined = pd.concat(train_val_dfs, ignore_index=True)
+
+        # Define paths
+        train_val_path_csv = output_path / 'train_val_data.csv'
+        train_val_path_parquet = output_path / 'train_val_data.parquet'
+        train_val_path_csv_zip = output_path / 'train_val_data.csv.zip'
+
+        # Save as CSV
+        train_val_combined.to_csv(train_val_path_csv, sep=';', index=False)
+        # Save as Parquet
+        train_val_combined.to_parquet(train_val_path_parquet, index=False, engine='pyarrow')
+        # Save as Zipped CSV
+        train_val_combined.to_csv(train_val_path_csv_zip, sep=';', index=False, compression='zip')
+
+        print(f"Successfully saved combined train/val data to:")
+        print(f"  - {train_val_path_csv}")
+        print(f"  - {train_val_path_parquet}")
+        print(f"  - {train_val_path_csv_zip} (Compressed)")
+    else:
+        print(f"Warning: No train/val data was processed.")
+
+    if test_dfs:
+        test_combined = pd.concat(test_dfs, ignore_index=True)  # Concat handles list of one
+
+        # Define paths
+        test_path_csv = output_path / 'test_data.csv'
+        test_path_parquet = output_path / 'test_data.parquet'
+        test_path_csv_zip = output_path / 'test_data.csv.zip'
+
+        # Save as CSV
+        test_combined.to_csv(test_path_csv, sep=';', index=False)
+        # Save as Parquet
+        test_combined.to_parquet(test_path_parquet, index=False, engine='pyarrow')
+        # Save as Zipped CSV
+        test_combined.to_csv(test_path_csv_zip, sep=';', index=False, compression='zip')
+
+        print(f"Successfully saved combined test data to:")
+        print(f"  - {test_path_csv}")
+        print(f"  - {test_path_parquet}")
+        print(f"  - {test_path_csv_zip} (Compressed)")  #
+    else:
+        print(f"Warning: No test data for year {TEST_YEAR} was processed.")
 
 
 if __name__ == "__main__":

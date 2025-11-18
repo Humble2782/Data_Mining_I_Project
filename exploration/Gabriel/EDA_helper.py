@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas.testing as pdt
 
 def summarize_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -236,3 +237,44 @@ def inspect_column_values(df: pd.DataFrame, column_name: str, top_n: int = 20):
     if len(value_counts) < col.nunique():
         print(f"  ...and {col.nunique() - len(value_counts)} other unique values.")
     print("---------------------------------")
+
+def compare_dataframes(df_left: pd.DataFrame,
+                       df_right: pd.DataFrame,
+                       check_column_order: bool = False):
+    """
+    Compares two DataFrames using pandas.testing.assert_frame_equal.
+
+    This provides a detailed error message if they are not identical.
+
+    Args:
+        df_left: The first DataFrame (e.g., "expected").
+        df_right: The second DataFrame (e.g., "actual").
+        check_column_order: If False (default), columns will be sorted
+                            by name before comparison, so order doesn't matter.
+    """
+    print("--- Starting DataFrame Comparison ---")
+
+    # If column order doesn't matter, sort them alphabetically.
+    # This is equivalent to check_like=True in the assertion.
+    if not check_column_order:
+        df_left = df_left.sort_index(axis=1)
+        df_right = df_right.sort_index(axis=1)
+
+    try:
+        pdt.assert_frame_equal(
+            df_left,
+            df_right,
+            check_dtype=True,  # Ensure 'int64' is not 'float64'
+            check_exact=True  # Ensure floats are identical
+        )
+        print("\n✅ SUCCESS: DataFrames are identical.")
+        print("---------------------------------------")
+        return True
+
+    except AssertionError as e:
+        print("\n❌ FAILURE: DataFrames are NOT identical.")
+        print("---------------------------------------")
+        print("\nDetailed Error:")
+        print(e)
+        print("---------------------------------------")
+        return False
