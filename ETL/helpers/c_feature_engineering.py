@@ -342,6 +342,7 @@ def create_ordinal_target(df_merged: pd.DataFrame) -> pd.DataFrame:
 
 def create_cluster_feature(df_merged: pd.DataFrame) -> pd.DataFrame:
     df_copy = df_merged.copy()
+    df_copy.drop(['injury_target'], axis=1, inplace=True)
     num_cols = ['latitude', 'longitude', 'speed_limit', 'age', 'hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos', "month_sin", "month_cos", "day_of_year_sin", "day_of_year_cos"]
     ord_cols = ['lighting_ordinal', 'weather_ordinal', 'road_complexity_index', 'impact_score', 'impact_score_other', 'impact_delta']
     cat_cols = []
