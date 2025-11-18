@@ -93,6 +93,10 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
     feature_selection_table = fs.select_features(imputed_table)
     print("Feature Selection complete.")
 
+    # --- Add cluster column ---
+    print("Starting clustering...")
+    clustered_table = fe.create_cluster_feature(feature_selection_table)
+
     # --- Dtype Conversion ---
     print("Converting final features to int16 for memory efficiency...")
 
@@ -108,22 +112,22 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         'vehicle_category_involved_other', 'vehicle_category_involved_powered_2_3_wheeler',
         'used_belt', 'used_helmet', 'used_child_restraint', 'used_airbag',
         'impact_score', 'impact_score_other', 'impact_delta', 'surface_quality_indicator',
-        'lighting_ordinal', 'weather_ordinal', 'injury_target', 'sex', 'day_of_week', 'speed_limit', 'age'
+        'lighting_ordinal', 'weather_ordinal', 'injury_target', 'sex', 'day_of_week', 'speed_limit', 'age', 'cluster'
     ]
 
     # Filter list to only include columns that survived feature selection
-    existing_cols_to_convert = [col for col in columns_to_int16 if col in feature_selection_table.columns]
+    existing_cols_to_convert = [col for col in columns_to_int16 if col in clustered_table.columns]
 
     # Perform the conversion
     if existing_cols_to_convert:
-        feature_selection_table[existing_cols_to_convert] = feature_selection_table[existing_cols_to_convert].astype(
+        clustered_table[existing_cols_to_convert] = clustered_table[existing_cols_to_convert].astype(
             'int16')
 
     print("Dtype conversion complete.")
 
     # --- Verification Step ---
     # Check for any NaNs that slipped through the targeted imputation
-    remaining_nans = feature_selection_table.isnull().sum()
+    remaining_nans = clustered_table.isnull().sum()
     remaining_nans = remaining_nans[remaining_nans > 0]  # Filter for columns that still have NaNs
 
     if not remaining_nans.empty:
@@ -143,7 +147,8 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
         'C_merged': merged_table,
         'D_feature_engineering': feature_engineering_table,
         'E_missing_data_handling': imputed_table,
-        'F_feature_selection': feature_selection_table
+        'F_feature_selection': feature_selection_table,
+        'G_clustering': clustered_table
     }
 
 

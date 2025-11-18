@@ -35,7 +35,7 @@ def impute_nans_other_vehicle(df:pd.DataFrame):
     df = df.dropna(subset=['vehicle_category_other'], how='any')
 
     # Replace NaN values with -1 when no other car is present otherwise with a 0
-    cols_to_be_cleaned_other = ['initial_point_of_impact_other', 'main_maneuver_before_accident_other', 'motor_type_other', 'impact_score_other']
+    cols_to_be_cleaned_other = ['main_maneuver_before_accident_other', 'motor_type_other', 'impact_score_other']
     for col in cols_to_be_cleaned_other:
         df[col] = np.where((df[col].isna()) & (df['other_vehicle'] == 0), -1, np.where((df[col].isna()) & (df['other_vehicle'] == 1), 0, df[col]))
     
