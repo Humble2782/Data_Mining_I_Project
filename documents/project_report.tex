@@ -71,15 +71,16 @@
 
 Modern assistive technologies in vehicles, such as the mandatory eCall system, automatically transmit accident data to emergency services. While this data includes location and passenger numbers, it lacks information on injury severity: a critical gap for first responders. The French National Interministerial Observatory for Road Safety (ONISR) database contains incident severity information concluded up to 30 days post-accident. Using this data as a baseline, our goal is to develop a classifier that can predict injury severity in real-time, helping first responders to take appropriate and timely precautions.
 
-\section{Structure and Size of the Data Set (1 page min)}
+\section{Structure and Size of the Data Set}
 
-Our analysis uses the "Annual Road Traffic Injury Databases" from 2019-2023, provided by ONISR. The data is supplied in four files per year (characteristics, locations, users, and vehicles) and includes features such as road conditions, weather, and user information. Recognizing the one-to-many relationship where each accident involves multiple participants, we defined our unit of analysis at the \textbf{individual level}. The \texttt{users} table serves as the base for our dataset.
+Our analysis uses the "Annual Road Traffic Injury Databases" from 2019--2023, provided by ONISR. The data is supplied in four files per year (characteristics, locations, users, and vehicles) and includes features such as road conditions, weather, and user information. Recognizing the one-to-many relationship where each accident involves multiple participants, we defined our unit of analysis at the \textbf{individual level}. The \texttt{users} table serves as the base for our dataset.
 
-TODO: Size of one year and size of training/val and test set.
+Directly after merging the accident characteristics, locations, users, and vehicle tables, and prior to any further preprocessing steps, the consolidated dataset comprised a total of 619,817 records and 71 columns. Processing the yearly data reveals an annual volume ranging between approximately 105,000 and 133,000 records per year. The final consolidated dataset was then partitioned into a training and validation set of \textbf{493,214 samples} (covering 2019--2022) and a test set of \textbf{125,505 samples} (covering 2023).
 
-The features we have selected are listed below. They are categorized into Original Features (retained from raw data) and Engineered Features (calculated to model complex relationships). The final dataset consists of \textbf{56 features}, comprising \textbf{23 original columns} retained from the raw data and \textbf{33 engineered features} calculated to model complex relationships.
+The features we have selected are listed below. They are categorized into Original Features (retained from raw data) and Engineered Features (calculated to model complex relationships). The final dataset consists of \textbf{57 features}, comprising \textbf{23 original columns} retained from the raw data and \textbf{34 engineered features} calculated to model complex relationships.
 
-\begin{description}[leftmargin=0pt]
+\begin{description}
+  [leftmargin=0pt]
 \item[Time context] \hfill \\
 {\raggedright \small\texttt{\{time\us of\us day, hour\us sin\sls cos, day\us of\us week\us sin\sls cos, month\us sin\sls cos, day\us of\us year\us sin\sls cos\}} \par}
 Captures seasonality and daily patterns using cyclical sine/cosine transformations for time units. Also includes \texttt{time\us of\us day}, which groups hours into broader categories (e.g., Night, Rush Hour).
@@ -108,26 +109,65 @@ Covers demographic data (age, sex), the user's role (driver, passenger, pedestri
 {\raggedright \small\texttt{\{used\us belt, used\us helmet, used\us child\us restraint, used\us airbag\}} \par}
 Binary variables indicating the use of protective gear (seatbelts, helmets) or the deployment of airbags.
 
+\item[Accident Persona Clustering] \hfill \\
+{\raggedright \small\texttt{\{cluster\}} \par}
+A categorical feature derived from unsupervised K-Prototypes clustering. It groups accidents into distinct "personas" (e.g., 0, 1, 2) based on a combination of numerical and categorical attributes to capture complex, non-linear patterns in the data.
+
 \item[Target / Outcome] \hfill \\
 {\raggedright \small\texttt{\{injury\us target\}} \par}
 The engineered ordinal target variable classifying injury severity into three levels: 0 (Uninjured), 1 (Lightly Injured), and 2 (Hospitalized or Dead).
 \end{description}
 
-\section{Preprocessing (1 page min)}
+\section{Preprocessing}
 
-Our primary task is to predict the injury severity for each individual involved in an accident. The \textbf{target variable} is the ordinal \texttt{grav} feature, categorized into four classes of increasing severity: \textbf{Not Injured, Lightly Injured, Severely Injured, and Killed}. This individual-level approach directly addresses the relational data structure and allows the use of user-specific features.
+Given the nature of the "Annual Road Traffic Injury Database" as a raw database output provided by ONISR in multiple separate tables with complex many-to-one relationships, extensive preprocessing was required. The pipeline is designed to transform the disjointed raw data into a singular, model-ready tabular representation.
 
-For each user, we merged the corresponding accident characteristics, location, and vehicle information using the \texttt{Num\_Acc} key. For users without an associated vehicle, such as pedestrians, vehicle-specific features are handled as a distinct 'Not Applicable' category, creating a comprehensive record for every individual.
+\subsection{Data Standardization and Key Generation}
+The initial step involved normalizing column names to English equivalents. A critical challenge was the inconsistency in user identification across years. Data from 2022 onwards included a distinct \texttt{id\us user}, whereas data from 2019 and 2020 did not. To ensure a consistent unit of analysis across all years, we implemented a synthetic key generation strategy. For older data, we generated a unique identifier by combining the accident ID with a cumulative count of users within that accident (e.g., \texttt{2019000001\us U1}). This ensured that every individual involved in an accident could be uniquely tracked and merged with their respective vehicle and accident characteristics.
 
-We use a chronological train-test split, with 2019-2022 data for training and 2023 for testing. For hyperparameter optimization, we will use a \textbf{GroupKFold} cross-validation strategy with the accident ID (\texttt{Num\_Acc}) as the group identifier. This ensures that participants from a single accident remain in the same fold, which handles their non-independence and leads to a more robust model evaluation.
+\subsection{Advanced Data Merging strategies}
+A user-centric view was adopted for merging, treating each participant as an independent instance. While accident characteristics (weather, time) could be joined directly, the relationship between users, their vehicles, and opposing vehicles required complex logic.
 
-Key preprocessing steps will include:
+\subsubsection{Vehicle Antagonist Resolution}
+A significant predictor of injury severity is the disparity between the user's vehicle and the "opposing" entity (the antagonist). Since a simple join cannot determine which of the multiple vehicles in an accident caused the injury, we engineered a selection algorithm. We assigned an \texttt{impact\us score} to vehicle categories based on mass and risk (e.g., HGV Truck = 6, Bicycle = 2).
+For multi-vehicle accidents, the pipeline identifies the "antagonist" vehicle as the one involved in the same accident with the highest impact score, excluding the user's own vehicle. For pedestrians, the striking vehicle is explicitly identified. This allows us to calculate an \texttt{impact\us delta}, representing the structural disadvantage of the user (e.g., a cyclist hit by a truck results in a high negative delta).
+
+\subsubsection{Location Deduplication}
+Contrary to the dataset description, multiple location entries were found for single accident IDs, likely due to first responders logging entries for every intersecting street. To resolve this, we implemented a \texttt{completeness\us score}. We assigned weights to critical columns (Road Category: 2.0, Speed Limit: 2.0, others: 1.0). For each accident, the location entry with the highest weighted score, indicating the most data-rich description of the scene, was selected, ensuring the model trains on the highest quality data available.
+
+\subsection{Handling Missing Values (Imputation Strategy)}
+We distinguished between "structural missingness" (values that should not exist) and "data quality missingness" (values that are unknown).
+
 \begin{itemize}
-    \item \textbf{Real-Time Feature Selection}: A rigorous selection to prevent data leakage by exclusively using features available immediately at the accident scene.
-    \item \textbf{Inter-Vehicle Feature Engineering}: To account for interactions between vehicles, we will engineer features summarizing the context of other parties involved, such as the number and types of other vehicles (e.g., 'truck\_involved', 'motorcycle\_involved').
-    \item \textbf{Handling Class Imbalance}: Our primary strategy is using the built-in \texttt{class\_weight} model parameter. If needed, we will explore advanced oversampling techniques like SMOTE as a secondary step.
-    \item \textbf{Data Cleaning and Formatting}: This includes consistent handling of null values, correcting input errors, and formatting time fields.
+    \item \textbf{Structural Missingness:} Pedestrians, by definition, do not have a vehicle category or motor type. For these cases, we explicitly imputed a value of \texttt{-1} or \texttt{'none'} to indicate "Not Applicable," preventing the model from treating these as missing data.
+    \item \textbf{Data Quality Missingness:} For users who \textit{should} have data (e.g., drivers) but lack it, we imputed a value of \texttt{0} or \texttt{'Unknown'}.
+    \item \textbf{Other Vehicle Imputation:} If no opposing vehicle was involved, columns related to the "other" vehicle were set to \texttt{-1}. However, if a second vehicle ID existed but its characteristics were missing, we imputed \texttt{Unknown} to differentiate this state from single-vehicle accidents.
 \end{itemize}
+Finally, rows missing the target variable \texttt{injury\us severity} were dropped, as they cannot be used for supervised learning.
+
+\subsection{Feature Engineering}
+To capture complex non-linear relationships, we generated 34 new features across four domains.
+
+\subsubsection{Temporal Cyclical Features}
+Raw timestamps are ill-suited for many models due to the discontinuity between 23:59 and 00:00. We decomposed time into cyclical components using Sine and Cosine transformations for hours, days of the week, and months. Additionally, we bucketed hours into a \texttt{time\us of\us day} feature (Night, Morning Rush, Midday, Evening Rush) to assist tree-based models in identifying high-level patterns.
+
+\subsubsection{Road Complexity Index}
+We hypothesized that complex road environments increase accident probability but might decrease severity due to lower speeds. We engineered a \texttt{road\us complexity\us index}, a composite score normalized between 0 and 10. This index aggregates weighted scores from:
+\begin{itemize}
+    \item \textbf{Intersection Type:} High weights for roundabouts and multi-branch intersections.
+    \item \textbf{Road Category:} Higher weights for urban communal ways vs. motorways.
+    \item \textbf{Traffic Regime:} Penalties for variable assignment lanes.
+    \item \textbf{Lane Count:} Higher complexity for multi-lane roads.
+\end{itemize}
+Complementing this, a binary \texttt{surface\us quality\us indicator} was created, set to 1 only if both the pavement condition was normal and the longitudinal profile was flat.
+
+\subsubsection{Vehicle and User Attributes}
+Vehicle categories were simplified from over 30 specific codes into 6 broad classes (Bicycle, Powered 2-3 Wheeler, Light Motor Vehicle, HGV/Truck, Bus/Coach, Other) to reduce dimensionality.
+For users, we transformed the \texttt{year\us of\us birth} into an \texttt{age} feature and further binned it into sociologically relevant \texttt{age\us groups} (e.g., Child/Teen, Senior). Safety equipment flags (seatbelts, helmets, airbags) were consolidated from three separate columns into binary "Used/Not Used" indicators to resolve data sparsity.
+
+\subsection{Feature Selection \& Cleaning}
+Following engineering, the dataset underwent a rigorous cleaning process. Invalid data, such as speed limits exceeding 130 km/h or negative values for age, were filtered out. We removed high-cardinality identifiers (IDs, address strings) and columns with excessive missingness (e.g., \texttt{width\us central\us reservation}) that offered little predictive value.
+Crucially, the raw target variable \texttt{injury\us severity} (4 classes) was re-mapped to an ordinal \texttt{injury\us target} (0: Uninjured, 1: Light Injury, 2: Hospitalized/Dead) to address class imbalance and better reflect the triage needs of first responders. The final dataset consists of 57 refined features ready for the modeling pipeline.
 
 \section{Data Mining}
 
@@ -151,5 +191,35 @@ For classification, all models must significantly outperform a \textbf{"Most Fre
 \section{Results}
 
 Our primary goal is to create a model capable of classifying injury severity to a satisfactory degree. We expect the clustering analysis to uncover specific, evidence-based "accident personas," such as low-speed urban collisions, high-velocity rural incidents, and collisions involving vulnerable road users. From the feature importance analysis, we expect to confirm that vehicle type (motorcycle vs. car) is a dominant predictor of severe injury. We also anticipate that factors like road category, lighting conditions, driver's age, and the use of safety equipment will be highly significant in predicting an individual's outcome.
+
+\newpage
+\section*{Ehrenwörtliche Erklärung}
+Ich versichere, dass ich die beiliegende Bachelor-, Master-, Seminar-, oder
+Projektarbeit ohne Hilfe Dritter und ohne Benutzung anderer als der angegebenen
+Quellen und in der untenstehenden Tabelle angegebenen Hilfsmittel angefertigt
+und die den benutzten Quellen wörtlich oder inhaltlich entnommenen Stellen als
+solche kenntlich gemacht habe. Diese Arbeit hat in gleicher oder ähnlicher Form
+noch keiner Prüfungsbehörde vorgelegen. Ich bin mir bewusst, dass eine falsche
+Erklärung rechtliche Folgen haben wird.
+
+% Declare below which AI tools you used in the process of writing your work,
+% including text, image, code, and data generation. If you used a tool for a
+% purpose not included in the list yet, add it to the list.
+\begin{center}
+  \textbf{Declaration of Used AI Tools} \\[.3em]
+  \begin{tabularx}{\textwidth}{lXlc}
+    \toprule
+    Tool & Purpose & Where? & Useful? \\
+    \midrule
+    Gemini 2.5/3 Pro & Rephrasing & Throughout & +++ \\
+    Gemini 2.5/3 Pro & Code Generation and Code Debugging & Throughout & +++ \\
+    \bottomrule
+  \end{tabularx}
+\end{center}
+
+\vspace{2cm}
+\noindent Unterschrift\\
+\noindent Mannheim, den 30.~Oktober 2025 \hfill
+\end{document}
 
 \end{document}
