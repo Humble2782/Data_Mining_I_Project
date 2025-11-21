@@ -340,20 +340,37 @@ def create_ordinal_target(df_merged: pd.DataFrame) -> pd.DataFrame:
 
     return df_copy
 
+
 def create_cluster_feature(df_merged: pd.DataFrame) -> pd.DataFrame:
-    df_copy = df_merged.copy()
-    df_copy.drop(['injury_target'], axis=1, inplace=True)
-    num_cols = ['latitude', 'longitude', 'speed_limit', 'age', 'hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos', "month_sin", "month_cos", "day_of_year_sin", "day_of_year_cos"]
-    ord_cols = ['lighting_ordinal', 'weather_ordinal', 'road_complexity_index', 'impact_score', 'impact_score_other', 'impact_delta']
+    """
+    Creates clusters using K-Prototypes.
+    Fixes:
+    - Performs transformations on a temporary dataframe to avoid returning stringified columns (like '0.0').
+    - Preserves the 'injury_target' column in the final output.
+    """
+    # Prepare result dataframe (keep original types)
+    df_result = df_merged.copy()
+
+    # Prepare temporary dataframe for K-Prototypes (drop target, convert cats to str)
+    df_model = df_merged.copy()
+    if 'injury_target' in df_model.columns:
+        df_model.drop(['injury_target'], axis=1, inplace=True)
+
+    num_cols = ['latitude', 'longitude', 'speed_limit', 'age', 'hour_sin', 'hour_cos', 'day_of_week_sin',
+                'day_of_week_cos', "month_sin", "month_cos", "day_of_year_sin", "day_of_year_cos"]
+    ord_cols = ['lighting_ordinal', 'weather_ordinal', 'road_complexity_index', 'impact_score', 'impact_score_other',
+                'impact_delta']
     cat_cols = []
-    
-    for col in df_copy.columns:
+
+    # Convert categorical columns to string ONLY in the model copy
+    for col in df_model.columns:
         if col not in num_cols and col not in ord_cols:
             cat_cols.append(col)
-            df_copy[col] = df_copy[col].astype(str)
-    cat_indices = [df_copy.columns.get_loc(col) for col in cat_cols]
-    df_np = df_copy.to_numpy()
-    
+            df_model[col] = df_model[col].astype(str)
+
+    cat_indices = [df_model.columns.get_loc(col) for col in cat_cols]
+    df_np = df_model.to_numpy()
+
     kproto = KPrototypes(
         n_clusters=3,
         init='Huang',
@@ -363,6 +380,8 @@ def create_cluster_feature(df_merged: pd.DataFrame) -> pd.DataFrame:
     )
 
     clusters = kproto.fit_predict(df_np, categorical=cat_indices)
-    df_copy['cluster'] = clusters
 
-    return df_copy
+    # Assign clusters back to the RESULT dataframe (which still has numeric types and injury_target)
+    df_result['cluster'] = clusters
+
+    return df_result
