@@ -309,6 +309,13 @@ These columns are newly calculated in \texttt{c\_feature\_engineering.py} or \te
     \item \textbf{\col{vehicle_category_involved_light_motor_vehicle}}: (Binary) 1 if a light motor vehicle/car was involved.
     \item \textbf{\col{vehicle_category_involved_other}}: (Binary) 1 if an "other" vehicle type was involved.
     \item \textbf{\col{vehicle_category_involved_powered_2_3_wheeler}}: (Binary) 1 if a moped/motorcycle was involved.
+    
+    \item \textbf{\col{cluster}}: Assignment to one of 3 "accident personas" identified via unsupervised K-Prototypes clustering. Used to capture complex non-linear relationships between attributes.
+        \begin{itemize}
+            \item \texttt{0}: Persona 0
+            \item \texttt{1}: Persona 1
+            \item \texttt{2}: Persona 2
+        \end{itemize}
 \end{itemize}
 
 \subsection{Ordinal Features (Ordered Categories)}
@@ -345,4 +352,3 @@ These columns are newly calculated in \texttt{c\_feature\_engineering.py} or \te
 \end{itemize}
 
 \end{document}
-

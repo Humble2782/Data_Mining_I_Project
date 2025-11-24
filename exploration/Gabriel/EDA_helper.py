@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas.testing as pdt
+from pathlib import Path
 
 def summarize_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -278,3 +279,47 @@ def compare_dataframes(df_left: pd.DataFrame,
         print(e)
         print("---------------------------------------")
         return False
+
+
+def print_dataframe_shapes(folder_path):
+    """
+    Iterates through a folder, reads .csv and .parquet files,
+    and prints their shape (Rows, Columns).
+
+    Improvements:
+    - Uses 'sep=None' and 'engine=python' for CSVs to auto-detect delimiters (e.g. ; or ,).
+    """
+    path = Path(folder_path)
+
+    if not path.exists():
+        print(f"Error: Path '{folder_path}' does not exist.")
+        return
+
+    print(f"--- Inspecting DataFrames in: {path.resolve()} ---")
+    print(f"{'File Name':<30} | {'Rows':<10} | {'Columns':<10}")
+    print("-" * 60)
+
+    files_found = False
+    target_extensions = {'.csv', '.parquet'}
+
+    for file_path in path.iterdir():
+        if file_path.is_file() and file_path.suffix.lower() in target_extensions:
+            files_found = True
+            try:
+                # Determine file type and load accordingly
+                if file_path.suffix.lower() == '.csv':
+                    # sep=None prompts pandas to sniff the delimiter automatically
+                    df = pd.read_csv(file_path, sep=None, engine='python')
+                elif file_path.suffix.lower() == '.parquet':
+                    df = pd.read_parquet(file_path)
+
+                # Get shape
+                rows, cols = df.shape
+                print(f"{file_path.name:<30} | {rows:<10} | {cols:<10}")
+
+            except Exception as e:
+                print(f"{file_path.name:<30} | Error reading file: {e}")
+
+    print("-" * 60)
+    if not files_found:
+        print("No .csv or .parquet files found.")
