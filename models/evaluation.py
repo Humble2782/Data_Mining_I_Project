@@ -77,7 +77,66 @@ def get_baseline_performance(y_train: pd.Series,
         "baseline_weighted_f1": baseline_f1,
         "baseline_weighted_kappa": baseline_kappa
     }
+    
+def get_speed_rule_baseline_performance(
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    speed_col: str = "speed_limit",
+    labels: Optional[List[int]] = None,
+):
+    """
+    Calculates the performance of a simple rule-based baseline classifier
+    based on the speed_limit column.
 
+    Rule:
+        if speed <= 50:  class 0
+        elif speed < 100: class 1
+        else:             class 2
+
+    This serves as a baseline that more complex models should improve upon.
+
+    Args:
+        X_test: Test feature DataFrame containing the speed column.
+        y_test: True target values for the test set.
+        speed_col: Name of the column in X_test that contains the speed values
+                   (default: "speed_limit").
+        labels: The unique, sorted list of class labels (e.g., [0, 1, 2]).
+
+    Returns:
+        A dictionary containing the baseline's weighted F1 and Kappa scores.
+    """
+
+    print(f"Calculating rule-based baseline performance using column '{speed_col}'...")
+
+    # Extract speed values
+    speeds = X_test[speed_col].to_numpy()
+
+    # Vectorized rule-based prediction
+    # if speed <= 50 -> 0; elif speed < 100 -> 1; else -> 2
+    y_pred_baseline = np.where(
+        speeds <= 50,
+        0,
+        np.where(speeds < 100, 1, 2)
+    )
+
+    if labels is None:
+        labels = np.unique(y_test)
+
+    # Calculate key baseline metrics
+    baseline_f1 = f1_score(y_test, y_pred_baseline, average='macro', labels=labels)
+    baseline_kappa = cohen_kappa_score(y_test, y_pred_baseline, weights='quadratic')
+
+    print("\n--- Rule-based Baseline (Speed Limit) Report ---")
+    print(classification_report(y_test, y_pred_baseline, labels=labels, zero_division=0))
+    print(f"Baseline Weighted F1-Score: {baseline_f1:.4f}")
+    print(f"Baseline Weighted Cohen's Kappa: {baseline_kappa:.4f}")
+    print("--------------------------------------------------")
+
+    return {
+        "rule_baseline_macro_f1": baseline_f1,
+        "rule_baseline_weighted_kappa": baseline_kappa,
+    }
+    
 
 def print_classification_report(y_true: pd.Series,
                                 y_pred: np.ndarray,
@@ -306,3 +365,5 @@ def evaluate_clustering(X_data: pd.DataFrame, cluster_labels: np.ndarray):
     print("Please manually inspect the centroids or exemplars of each cluster")
     print("to assess the interpretability of the 'accident scenarios.'")
     print("--------------------------------")
+    
+    
