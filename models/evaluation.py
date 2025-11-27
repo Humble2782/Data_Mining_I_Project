@@ -342,6 +342,64 @@ def run_classification_evaluation(model: Any,
     return {**baseline_scores, **model_scores}
 
 
+def run_classification_evaluation_non_prob(model: Any,
+                                  X_test: pd.DataFrame,
+                                  y_test: pd.Series,
+                                  y_train: pd.Series,
+                                  class_names: List[str],
+                                  labels: List[int]):
+    """
+    A full-service wrapper function that runs the complete
+    classification evaluation as specified in the project outline.
+
+    Args:
+        model: The trained classifier model (must have .predict() and .predict_proba()).
+        X_test: Test features.
+        y_test: Test target.
+        y_train: Training target (for baseline calculation).
+        class_names: List of string names for the classes (e.g., ["Uninjured", "Light", "Severe"]).
+        labels: List of integer labels (e.g., [0, 1, 2]).
+
+    Returns:
+        A dictionary with key baseline and model scores.
+    """
+
+    # --- 1. Get Baseline Performance ---
+    baseline_scores = get_baseline_performance(y_train, y_test, labels=labels)
+
+    # --- 2. Get Model Predictions ---
+    print("\nEvaluating model performance...")
+    y_pred = model.predict(X_test)
+
+    # --- 3. Get Model Metrics ---
+    model_scores = print_classification_report(y_test, y_pred,
+                                               target_names=class_names,
+                                               labels=labels)
+
+    # --- 4. Create Visualizations ---
+    print("Generating visualizations...")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7))
+    fig.suptitle(f'Model Evaluation: {type(model).__name__}', fontsize=16)
+
+    # Plot Raw Confusion Matrix
+    # plot_confusion_matrix(y_test, y_pred, ax=ax1,
+    #                       class_names=class_names,
+    #                       normalize=None,
+    #                       title='Confusion Matrix (Raw Counts)')
+
+    # Plot Normalized Confusion Matrix (often more insightful)
+    plot_confusion_matrix(y_test, y_pred, ax=ax1,
+                          class_names=class_names,
+                          normalize='true',  # Normalize by true class (rows)
+                          title='Confusion Matrix (Normalized by True Class)')
+
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+    return {**baseline_scores, **model_scores}
+
+
 def evaluate_clustering(X_data: pd.DataFrame, cluster_labels: np.ndarray):
     """
     Evaluates a clustering model using the Silhouette Score.
