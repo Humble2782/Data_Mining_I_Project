@@ -77,7 +77,66 @@ def get_baseline_performance(y_train: pd.Series,
         "baseline_weighted_f1": baseline_f1,
         "baseline_weighted_kappa": baseline_kappa
     }
+    
+def get_speed_rule_baseline_performance(
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    speed_col: str = "speed_limit",
+    labels: Optional[List[int]] = None,
+):
+    """
+    Calculates the performance of a simple rule-based baseline classifier
+    based on the speed_limit column.
 
+    Rule:
+        if speed <= 50:  class 0
+        elif speed < 100: class 1
+        else:             class 2
+
+    This serves as a baseline that more complex models should improve upon.
+
+    Args:
+        X_test: Test feature DataFrame containing the speed column.
+        y_test: True target values for the test set.
+        speed_col: Name of the column in X_test that contains the speed values
+                   (default: "speed_limit").
+        labels: The unique, sorted list of class labels (e.g., [0, 1, 2]).
+
+    Returns:
+        A dictionary containing the baseline's weighted F1 and Kappa scores.
+    """
+
+    print(f"Calculating rule-based baseline performance using column '{speed_col}'...")
+
+    # Extract speed values
+    speeds = X_test[speed_col].to_numpy()
+
+    # Vectorized rule-based prediction
+    # if speed <= 50 -> 0; elif speed < 100 -> 1; else -> 2
+    y_pred_baseline = np.where(
+        speeds <= 50,
+        0,
+        np.where(speeds < 100, 1, 2)
+    )
+
+    if labels is None:
+        labels = np.unique(y_test)
+
+    # Calculate key baseline metrics
+    baseline_f1 = f1_score(y_test, y_pred_baseline, average='macro', labels=labels)
+    baseline_kappa = cohen_kappa_score(y_test, y_pred_baseline, weights='quadratic')
+
+    print("\n--- Rule-based Baseline (Speed Limit) Report ---")
+    print(classification_report(y_test, y_pred_baseline, labels=labels, zero_division=0))
+    print(f"Baseline Weighted F1-Score: {baseline_f1:.4f}")
+    print(f"Baseline Weighted Cohen's Kappa: {baseline_kappa:.4f}")
+    print("--------------------------------------------------")
+
+    return {
+        "rule_baseline_macro_f1": baseline_f1,
+        "rule_baseline_weighted_kappa": baseline_kappa,
+    }
+    
 
 def print_classification_report(y_true: pd.Series,
                                 y_pred: np.ndarray,
@@ -283,6 +342,64 @@ def run_classification_evaluation(model: Any,
     return {**baseline_scores, **model_scores}
 
 
+def run_classification_evaluation_non_prob(model: Any,
+                                  X_test: pd.DataFrame,
+                                  y_test: pd.Series,
+                                  y_train: pd.Series,
+                                  class_names: List[str],
+                                  labels: List[int]):
+    """
+    A full-service wrapper function that runs the complete
+    classification evaluation as specified in the project outline.
+
+    Args:
+        model: The trained classifier model (must have .predict() and .predict_proba()).
+        X_test: Test features.
+        y_test: Test target.
+        y_train: Training target (for baseline calculation).
+        class_names: List of string names for the classes (e.g., ["Uninjured", "Light", "Severe"]).
+        labels: List of integer labels (e.g., [0, 1, 2]).
+
+    Returns:
+        A dictionary with key baseline and model scores.
+    """
+
+    # --- 1. Get Baseline Performance ---
+    baseline_scores = get_baseline_performance(y_train, y_test, labels=labels)
+
+    # --- 2. Get Model Predictions ---
+    print("\nEvaluating model performance...")
+    y_pred = model.predict(X_test)
+
+    # --- 3. Get Model Metrics ---
+    model_scores = print_classification_report(y_test, y_pred,
+                                               target_names=class_names,
+                                               labels=labels)
+
+    # --- 4. Create Visualizations ---
+    print("Generating visualizations...")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7))
+    fig.suptitle(f'Model Evaluation: {type(model).__name__}', fontsize=16)
+
+    # Plot Raw Confusion Matrix
+    # plot_confusion_matrix(y_test, y_pred, ax=ax1,
+    #                       class_names=class_names,
+    #                       normalize=None,
+    #                       title='Confusion Matrix (Raw Counts)')
+
+    # Plot Normalized Confusion Matrix (often more insightful)
+    plot_confusion_matrix(y_test, y_pred, ax=ax1,
+                          class_names=class_names,
+                          normalize='true',  # Normalize by true class (rows)
+                          title='Confusion Matrix (Normalized by True Class)')
+
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+    return {**baseline_scores, **model_scores}
+
+
 def evaluate_clustering(X_data: pd.DataFrame, cluster_labels: np.ndarray):
     """
     Evaluates a clustering model using the Silhouette Score.
@@ -306,3 +423,5 @@ def evaluate_clustering(X_data: pd.DataFrame, cluster_labels: np.ndarray):
     print("Please manually inspect the centroids or exemplars of each cluster")
     print("to assess the interpretability of the 'accident scenarios.'")
     print("--------------------------------")
+    
+    
