@@ -69,11 +69,11 @@
 
 \section{Application Area and Goals (0.5 pages)}
 
-Modern intelligent and connected vehicle systems, such as the mandatory European eCall service, are designed to automatically transmit crucial accident data to emergency centers when a crash occurs. These transmissions typically include location, timestamp, and the number of passengers but lack information on the severity of injuries—a critical shortcoming for emergency services, as this information is vital for prioritizing rescue efforts and optimizing medical response times.
+Modern intelligent and connected vehicle systems, such as the mandatory European eCall service, are designed to automatically transmit crucial accident data to emergency centers when a crash occurs. These transmissions typically include location, timestamp, and the number of passengers but lack information on the severity of injuries: a critical shortcoming for emergency services, as this information is vital for prioritizing rescue efforts and optimizing medical response times.
 
 To address this gap, we focus on leveraging historical accident data provided by the French National Interministerial Observatory for Road Safety (ONISR). This organization maintains the official “Bulletins d’Analyse des Accidents Corporels de la Circulation” (BAAC), a national database that records all injury accidents on public roads in France. The dataset captures detailed multi-table information covering the circumstances of each accident (Caractéristiques), the location and infrastructure (Lieux), the vehicles involved (Véhicules), and the individual users (Usagers). These data entries include rich contextual variables such as road category, lighting and weather conditions, vehicle type, and the user’s role and behavior at the time of the accident.
 
-Each accident record specifies the injury outcome (grav) for every participant, coded as uninjured, lightly injured, hospitalized, or killed. Although the ONISR database provides this information retrospectively—sometimes up to 30 days after the event—it represents a uniquely valuable source for supervised learning aimed at approximating these outcomes in real time.
+Each accident record specifies the injury outcome (grav) for every participant, coded as uninjured, lightly injured, hospitalized, or killed. Although the ONISR database provides this information retrospectively (sometimes up to 30 days after the event) it represents a uniquely valuable source for supervised learning aimed at approximating these outcomes in real time.
 
 The goal of this project is to develop a machine learning classifier capable of predicting injury severity immediately after an accident, based solely on the information that would realistically be available to emergency responders or vehicle telematics systems at the moment of impact. Such a model can significantly enhance first-responder coordination by providing an automated injury risk assessment, enabling faster triage and more efficient resource allocation.
 
@@ -203,7 +203,7 @@ Across these experiments, we observed that all machine learning models substanti
 \begin{itemize}
 \item \textbf{Ridge Classifier with under-sampling:} Ridge classification provides fast and computationally efficient training and involves only a single hyperparameter to tune. Because ridge regularization tends to perform well when many features contribute small effects, it aligns well with our assumption that the predictive signal in our dataset arises from a broad set of variables rather than a few dominant predictors. In our experiments, we found it necessary to use under-sampling to compensate for the under-representation of the minority classes, as linear models are highly sensitive to class imbalance.
 
-\item \textbf{Balanced Random Forest:} Although an individual decision tree performed reasonably, our experiments showed that using an ensemble of trees  significantly improved predictive performance while still retaining interpretability through feature importance scores and the option to inspect individual trees. We also found that The Balanced Random Forest variant is  especially useful: while macro F1 remained stable compared to the standard Random Forrest, performance on the severely injured class improved substantially, which is crucial for our application, even though slight reductions were observed for the non-injured and slightly-injured classes.
+\item \textbf{Balanced Random Forest:} Although an individual decision tree performed reasonably, our experiments showed that using an ensemble of trees  significantly improved predictive performance while still retaining interpretability through feature importance scores and the option to inspect individual trees. We also found that the Balanced Random Forest variant is  especially useful: while macro F1 remained stable compared to the standard Random Forrest, performance on the severely injured class improved substantially, which is crucial for our application, even though slight reductions were observed for the non-injured and slightly-injured classes.
 
 \item \textbf{CatBoost:} CatBoost achieved the strongest performance in our preliminary experiments, making it a natural candidate for more in-depth analysis. An important advantage of this method is its ability to efficiently handle categorical features, which constitute the majority of our dataset. We set the auto\_class\_weights parameter to Balanced, so that class weights are inversely proportional to class frequencies, removing the need for additional undersampling.
 
@@ -218,7 +218,7 @@ In this study, we explore four clustering algorithms to analyze accident data: K
 %K-Means is a widely used centroid-based clustering algorithm that partitions data into a predefined number of clusters by minimizing the within-cluster sum of squares. It is computationally efficient and works well for datasets with predominantly numeric features. In this study, K-Means is applied to a one-hot encoded and scaled version of the accident data to provide a baseline clustering approach for comparison with algorithms designed for mixed data.
 
 \item \textbf{K-Prototypes:}
-K-Prototypes is well-suited for datasets that combine numerical and categorical variables, which makes it an appropriate choice for accident data dominated by categorical attributes. Its ability to cluster mixed‐type data in a single unified framework ensures that important categorical patterns—such as road characteristics or vehicle types—are not lost while still incorporating relevant numerical information.
+K-Prototypes is well-suited for datasets that combine numerical and categorical variables, which makes it an appropriate choice for accident data dominated by categorical attributes. Its ability to cluster mixed‐type data in a single unified framework ensures that important categorical patterns, such as road characteristics or vehicle types, are not lost while still incorporating relevant numerical information.
 
 \item \textbf{HDBSCAN:}
 HDBSCAN is motivated by its strength in detecting clusters of varying density and its capacity to identify noise points. Accident datasets often contain heterogeneous patterns and rare accident types; therefore, a density-based method that can naturally isolate such irregular cases without forcing them into clusters is highly desirable. Using Gower distance allows HDBSCAN to operate effectively on mixed data.
@@ -347,19 +347,19 @@ Our primary goal is to create a model capable of classifying injury severity to 
 
 \subsection{Clustering}
 The following section presents detailed accident profiles for each cluster, summarizing the key categorical patterns and numerical deviations that distinguish them.
-\subsubsection*{Cluster 0 — Midday pedestrian-involved accidents with older road users}
+\subsubsection*{Cluster 0: Midday pedestrian-involved accidents with older road users}
 This cluster is characterized by accidents that predominantly occur around midday and often involve older or middle-aged individuals. Pedestrian involvement is more typical here than in other clusters, and the accidents tend to take place in locations frequently associated with moderate traffic density.
 
-\subsubsection*{Cluster 1 — Night-time accidents with younger to middle-aged adults}
+\subsubsection*{Cluster 1: Night-time accidents with younger to middle-aged adults}
 Accidents in this cluster occur mainly during nighttime and involve a broad spectrum of younger age groups, including young adults, adults, and teenagers. Pedestrian-related features indicate reduced visibility or unclear pedestrian actions, suggesting conditions with lower lighting and potentially higher uncertainty in movement patterns.
 
-\subsubsection*{Cluster 2 — Morning rush hour collisions}
+\subsubsection*{Cluster 2: Morning rush hour collisions}
 This cluster mostly contains accidents happening during the morning peak traffic period. Specific collision types occur more frequently here, and certain weekdays are slightly overrepresented, pointing to commuting patterns. These accidents reflect typical rush-hour dynamics with increased traffic flow.
 
-\subsubsection*{Cluster 3 — High-speed urban location collisions with defined pedestrian involvement}
+\subsubsection*{Cluster 3: High-speed urban location collisions with defined pedestrian involvement}
 Cluster 3 shows a strong concentration of accidents in urban or densely built environments. Multiple collision types occur more frequently here, often involving pedestrian locations and actions typical for structured intersections or built-up areas. The cluster also exhibits a pattern of consistent seat-belt usage among vehicle occupants, suggesting regulated or lower-speed contexts.
 
-\subsubsection*{Cluster 4 — Low-speed high-frequency urban collisions with specific collision types}
+\subsubsection*{Cluster 4: Low-speed high-frequency urban collisions with specific collision types}
 This cluster is dominated by accidents in certain high-frequency urban locations and is marked by a few characteristic collision types. Pedestrian involvement can occur but is less central than in other clusters. The demographic structure is skewed toward adults, and the accident patterns suggest regular urban traffic situations with typical maneuver-related collisions.
 
 \newpage
