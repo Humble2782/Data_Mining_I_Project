@@ -209,6 +209,52 @@ Across these experiments, we observed that all machine learning models substanti
 
 \end{itemize}
 
+\subsection{Clustering}
+
+In this study, we explore four clustering algorithms to analyze accident data: K-Means, K-Prototypes, HDBSCAN, and Agglomerative Hierarchical Clustering. Each method has distinct characteristics that motivate its selection.
+
+\begin{itemize}
+%\item \textbf{K-Means:}
+%K-Means is a widely used centroid-based clustering algorithm that partitions data into a predefined number of clusters by minimizing the within-cluster sum of squares. It is computationally efficient and works well for datasets with predominantly numeric features. In this study, K-Means is applied to a one-hot encoded and scaled version of the accident data to provide a baseline clustering approach for comparison with algorithms designed for mixed data.
+
+\item \textbf{K-Prototypes:}
+K-Prototypes is well-suited for datasets that combine numerical and categorical variables, which makes it an appropriate choice for accident data dominated by categorical attributes. Its ability to cluster mixed‐type data in a single unified framework ensures that important categorical patterns—such as road characteristics or vehicle types—are not lost while still incorporating relevant numerical information.
+
+\item \textbf{HDBSCAN:}
+HDBSCAN is motivated by its strength in detecting clusters of varying density and its capacity to identify noise points. Accident datasets often contain heterogeneous patterns and rare accident types; therefore, a density-based method that can naturally isolate such irregular cases without forcing them into clusters is highly desirable. Using Gower distance allows HDBSCAN to operate effectively on mixed data.
+
+\item \textbf{Hierarchical Clustering:}
+Agglomerative hierarchical clustering is chosen for its interpretability and flexibility. It does not require pre-specifying the number of clusters. When paired with Gower distance, it becomes a useful exploratory tool for mixed-type accident variables, helping to reveal meaningful groupings even before a final cluster solution is selected.
+\end{itemize}
+
+Parameter tuning was conducted by varying the most influential hyperparameters of each clustering algorithm. 
+For Agglomerative Clustering and K-Prototypes, the number of clusters was set to 
+$k = 3, 5, 7$ to explore solutions of varying granularity. For HDBSCAN, which does not require a predefined number of clusters, the \textit{minimum cluster size} parameter was set to $k = 10, 20, 50$ to control the sensitivity of the algorithm to dense regions in the data.
+These values were chosen as they provide interpretable cluster structures while remaining computationally feasible for the dataset size. 
+ \\
+After completing the parameter tuning and selecting the final clustering configuration based on interpretability and silhouette performance, a K-Prototypes model with $k=3$ produced a cluster label for each accident record. The resulting cluster assignments were incorporated into the dataset as an additional feature. \\
+To derive meaningful accident profiles from the clustered dataset, we conducted a structured categorical overrepresentation analysis. For each cluster and each categorical feature, we computed the conditional distribution
+\[
+P(X = x \mid C = c),
+\]
+and compared it to the global distribution \(P(X=x)\).  
+A category was considered \emph{cluster-characteristic} if it satisfied the following criteria:
+
+\begin{itemize}
+    \item \textbf{Lift filter:}  
+    A minimum overrepresentation of  
+    \[
+      \text{lift}(x,c) = \frac{P(X=x \mid C=c)}{P(X=x)} > 1.5.
+    \]
+    This ensures the category is substantially more common in the cluster than in the overall population.
+
+    \item \textbf{Support filter:}  
+    The category must represent more than 3\% of observations within the cluster, preventing spurious rare categories from being selected.
+
+    \item \textbf{Dominance and variance filters:}  
+    Features were excluded if their distributions were nearly identical across clusters or if the same dominant category appeared in all clusters, as such features do not contribute to inter-cluster differentiation.
+\end{itemize}
+For numerical features, we computed summary statistics within each cluster, including the mean, median, standard deviation, and interquartile range, and compared these to the global distribution of the feature. A numerical feature was considered \emph{cluster-characteristic} if its mean or median significantly deviated from the global average, for instance, by more than one standard deviation, indicating that the cluster exhibits unusually high or low values for that feature.
 
 
 
@@ -298,6 +344,23 @@ In contrast, K-Prototypes generated more balanced clusters with substantially cl
 \section{Results}
 
 Our primary goal is to create a model capable of classifying injury severity to a satisfactory degree. We expect the clustering analysis to uncover specific, evidence-based "accident personas," such as low-speed urban collisions, high-velocity rural incidents, and collisions involving vulnerable road users. From the feature importance analysis, we expect to confirm that vehicle type (motorcycle vs. car) is a dominant predictor of severe injury. We also anticipate that factors like road category, lighting conditions, driver's age, and the use of safety equipment will be highly significant in predicting an individual's outcome.
+
+\subsection{Clustering}
+The following section presents detailed accident profiles for each cluster, summarizing the key categorical patterns and numerical deviations that distinguish them.
+\subsubsection*{Cluster 0 — Midday pedestrian-involved accidents with older road users}
+This cluster is characterized by accidents that predominantly occur around midday and often involve older or middle-aged individuals. Pedestrian involvement is more typical here than in other clusters, and the accidents tend to take place in locations frequently associated with moderate traffic density.
+
+\subsubsection*{Cluster 1 — Night-time accidents with younger to middle-aged adults}
+Accidents in this cluster occur mainly during nighttime and involve a broad spectrum of younger age groups, including young adults, adults, and teenagers. Pedestrian-related features indicate reduced visibility or unclear pedestrian actions, suggesting conditions with lower lighting and potentially higher uncertainty in movement patterns.
+
+\subsubsection*{Cluster 2 — Morning rush hour collisions}
+This cluster mostly contains accidents happening during the morning peak traffic period. Specific collision types occur more frequently here, and certain weekdays are slightly overrepresented, pointing to commuting patterns. These accidents reflect typical rush-hour dynamics with increased traffic flow.
+
+\subsubsection*{Cluster 3 — High-speed urban location collisions with defined pedestrian involvement}
+Cluster 3 shows a strong concentration of accidents in urban or densely built environments. Multiple collision types occur more frequently here, often involving pedestrian locations and actions typical for structured intersections or built-up areas. The cluster also exhibits a pattern of consistent seat-belt usage among vehicle occupants, suggesting regulated or lower-speed contexts.
+
+\subsubsection*{Cluster 4 — Low-speed high-frequency urban collisions with specific collision types}
+This cluster is dominated by accidents in certain high-frequency urban locations and is marked by a few characteristic collision types. Pedestrian involvement can occur but is less central than in other clusters. The demographic structure is skewed toward adults, and the accident patterns suggest regular urban traffic situations with typical maneuver-related collisions.
 
 \newpage
 \section*{Ehrenwörtliche Erklärung}
