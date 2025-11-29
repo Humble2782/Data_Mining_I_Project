@@ -185,7 +185,8 @@ def plot_confusion_matrix(y_true: pd.Series,
                           class_names: List[str],
                           ax: Optional[plt.Axes] = None,
                           normalize: Optional[str] = None,
-                          title: str = 'Confusion Matrix'):
+                          title: str = 'Confusion Matrix',
+                          cbar: bool = True):
     """
     Plots a confusion matrix on a given matplotlib Axes.
 
@@ -198,6 +199,7 @@ def plot_confusion_matrix(y_true: pd.Series,
                   'true' normalizes over the true labels (rows).
                   'pred' normalizes over the predicted labels (columns).
         title: The title for the plot.
+        cbar: Whether to draw a colorbar.
     """
     # --- NEW: Standard behavior if ax is not provided ---
     show_plot = False
@@ -220,7 +222,7 @@ def plot_confusion_matrix(y_true: pd.Series,
         title += ' (Normalized by Predicted Class)'
 
     sns.heatmap(cm, annot=True, fmt=fmt, cmap='Blues', ax=ax,
-                xticklabels=class_names, yticklabels=class_names)
+                xticklabels=class_names, yticklabels=class_names, cbar=cbar)
 
     ax.set_title(title, fontsize=14)
     ax.set_ylabel('True Label', fontsize=12)

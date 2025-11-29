@@ -24,7 +24,6 @@ class AccidentDataRenamed(TypedDict):
     vehicles: pd.DataFrame
     users: pd.DataFrame
 
-
 class AccidentPreprocessingResult(TypedDict):
     B_renamed: AccidentDataRenamed
     C_merged: pd.DataFrame
@@ -45,7 +44,7 @@ def process_year(df_circumstances: pd.DataFrame, df_locations: pd.DataFrame, df_
 
     # --- Call processing functions ---
     df_circumstances_processed = df_circumstances_renamed
-    df_users_processed = me.process_users(df_users_renamed, df_circumstances_renamed[['id_accident', 'year']])
+    df_users_processed = me.process_users(df_users_renamed)
     df_vehicles_processed = me.process_vehicles(df_vehicles_renamed)
     df_locations_processed = me.process_locations(df_locations_renamed)
 
