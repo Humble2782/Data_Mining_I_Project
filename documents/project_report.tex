@@ -334,24 +334,16 @@ A summary of the core evaluation metrics is provided in table \ref{tab:model_com
 \label{tab:model_comparison}
 \end{table}
 
-\subsubsection{Per-Class Performance}
-The \textbf{Uninjured} class is consistently the easiest to predict, with all machine learning models achieving recalls above 0.7. CatBoost performs best in this class (F1 = 0.81), benefiting from its ability to model nonlinear interactions between features. The BRF and RC models perform similarly (F1 = 0.80 and 0.78, respectively). The baseline severely underperforms, achieving only 0.56 F1. \\
-For the \textbf{Injured} class, all models exhibit weaker recall (0.50–0.63), suggesting substantial overlap with both the Uninjured and Severely Injured classes. CatBoost again achieves the strongest performance, with balanced precision and recall (0.64 and 0.63), whereas the RC struggles with low recall (0.50), indicating that many Injured cases are misclassified as Uninjured or Severe. \\
-The \textbf{Severely Injured} class displays the most interesting behavior: RC, BRF, and CB all achieve relatively high recall (0.65–0.74), but with lower precision (0.42–0.51). This reflects a consistent pattern across all models: they prefer to overpredict severe cases rather than risk missing them. Here, CatBoost achieves the highest F1-score (0.57).\\ \\
-To better understand these classification patterns, Figure~\ref{fig:three_images} shows the row-normalized confusion matrices for all three models, where each cell represents the proportion of true class instances assigned to each predicted label. \\
-Overall, similar trends appear across models. \textbf{Uninjured} cases are mainly confused with \textbf{Injured} (17–20\% for RC and BRF, 18\% for CatBoost), while confusion with the Severe class remains low (5–8\%). The \textbf{Injured} class shows the highest ambiguity, with substantial confusion toward Severe (34\% for RC, 27\% for BRF, 21\% for CatBoost) and some toward Uninjured (12–17\%). \textbf{Severely Injured} instances are generally identified reliably (65–74\%), with most misclassifications shifting toward Injured (19–29\%), and very few toward Uninjured (4–7\%), which is desirable from a safety standpoint.
-
-
 \subsubsection{Aggregate Metrics}
-Macro and micro F1-scores provide an overall assessment of model performance across classes. CatBoost 
-achieves the highest macro F1 (0.67) and micro F1 (0.71), indicating strong performance both in balancing 
-minority and majority classes and in overall classification accuracy. BRF follows closely with a macro F1 
-of 0.66 and a micro F1 of 0.69, while RC performs slightly worse (macro F1 = 0.62, micro F1 = 0.66). 
-The baseline is substantially weaker, achieving only 0.33 macro F1 and 0.40 micro F1.
+Macro and micro F1-scores show that CatBoost performs best overall, achieving the strongest balance between minority and majority classes. BRF follows closely, with RC performing somewhat weaker while still substantially outperforming the baseline. Cohen’s κ confirms this ranking: CatBoost and BRF provide the highest agreement beyond chance, RC is slightly behind, and the baseline performs only marginally better than random guessing.
 
-Cohen's $\kappa$ further confirms these trends. CatBoost attains the highest agreement beyond chance 
-($\kappa = 0.6488$), followed by BRF ($\kappa = 0.6343$) and RC ($\kappa = 0.6021$). The baseline performs 
-close to chance level ($\kappa = 0.0910$), reinforcing its inadequacy as a predictive model.
+
+\subsubsection{Per-Class Performance}
+The Uninjured class is consistently the easiest to predict, with all machine-learning models achieving high recall, and CatBoost performing best among them. For the Injured class, all models show weaker recall, indicating substantial overlap with the Uninjured and Severely Injured classes; CatBoost again performs strongest, while the Ridge classifier struggles most to correctly identify these cases. The Severely Injured class is the most challenging but also the most critical: all three learned models prioritise recall over precision, systematically preferring to overpredict severe cases rather than risk missing them, with CatBoost achieving the best overall balance.
+To better understand these classification patterns, Figure~\ref{fig:three_images} shows the row-normalized confusion matrices for all three models. Across models, broadly similar trends emerge. \textbf{Uninjured} cases are mostly classified correctly, with occasional confusion toward \textbf{Injured} and only rarely toward \textbf{Severe}. The \textbf{Injured} class is the most ambiguous, with frequent misclassifications both as Uninjured and Severe. \textbf{Severely Injured} cases are generally identified reliably, and when they are misclassified, they are usually assigned to the Injured class rather than Uninjured, which is desirable from a safety perspective.
+
+
+
 
 \subsubsection{Precision--Recall AUC}
 Since precision--recall curves are particularly informative for imbalanced classification tasks, we also 
@@ -393,19 +385,10 @@ To interpret the models' decision-making behavior, Table~\ref{tab:feature_import
 Overall, the Ridge Classifier primarily relies on variables describing the number and types of vehicles involved, reflecting its focus on structural crash characteristics. The Balanced Random Forest emphasizes features related to the collision type and crash intensity, which aligns with its ability to capture nonlinear tree-based interactions. CatBoost, in contrast, highlights a more diverse mix of demographic, situational, and crash-mechanics features, indicating that it leverages broader and more heterogeneous information. This richer feature utilization likely contributes to its superior predictive performance.
 
 
-
 \subsubsection{Summary}
-Overall, CatBoost consistently yields the best results across nearly all metrics, particularly for the 
-challenging \emph{Injured} and \emph{Severely Injured} classes. The Balanced Random Forest performs 
-comparably well and represents a strong traditional machine learning baseline. The Ridge Classifier is 
-competitive despite its simplicity but shows clear limitations relative to tree-based models. The rule-based 
-speed-limit baseline performs poorly, underscoring that injury severity prediction requires substantially 
-richer information than road speed limits alone.
+The results highlight the benefits of flexible, non-linear models, especially CatBoost, in capturing the complex interactions underlying road traffic injury severity.
+The CatBoost confusion matrix shows that about 95\% of severely injured cases are at least classified as injured, so a real-time system could flag most severe accidents early and support faster emergency response. However, this comes at the cost of inefficient resource allocation, because also around 5\% of non-injury cases would be predicted as severely injured and trigger unnecessary deployments, illustrating a fundamental trade-off between saving lives and resource efficiency. Moreover, the remaining 5\% of severely injured cases that are predicted as uninjured are a critical limitation: such a system cannot replace emergency calls or human judgment but should instead be viewed as a decision-support tool that helps responders prioritize and detect severe accidents that might otherwise be recognized too late.
 
-These results highlight the benefits of flexible, non-linear models—especially CatBoost—in capturing the 
-complex interactions underlying road traffic injury severity.
-
-The CatBoost confusion matrix shows that about 95\% of severely injured cases are at least classified as injured, so a real-time system could flag most severe accidents early and support faster emergency response. However, this comes at the cost of inefficient resource allocation, because also around 5\% of non-injury cases would be predicted as severely injured and trigger unnecessary deployments, illustrating a fundamental trade-off between saving lives and resource efficiency. Moreover, the remaining 5\% of severely injured cases that are predicted as uninjured are a critical limitation: such a system cannot replace emergency calls or human judgement but should instead be viewed as a decision-support tool that helps responders prioritise and detect severe accidents that might otherwise be recognised too late.
 
 \begin{figure}[ht]
     \centering
