@@ -404,6 +404,8 @@ richer information than road speed limits alone.
 These results highlight the benefits of flexible, non-linear models—especially CatBoost—in capturing the 
 complex interactions underlying road traffic injury severity.
 
+The fact that none of the models achieves a macro F1-score above 0.70 highlights the complexity of traffic accidents and suggests that the available features may not fully capture this complexity. Nevertheless, all machine-learning models clearly outperform the simple speed-limit baseline, indicating that they do extract meaningful patterns from the data. The CatBoost confusion matrix shows that about 95\% of severely injured cases are at least classified as injured, so a real-time system could flag most severe accidents early and support faster emergency response. However, this comes at the cost of inefficient resource allocation, because also around 5\% of non-injury cases would be predicted as severely injured and trigger unnecessary deployments, illustrating a fundamental trade-off between saving lives and resource efficiency. Moreover, the remaining 5\% of severely injured cases that are predicted as uninjured are a critical limitation: such a system cannot replace emergency calls or human judgement but should instead be viewed as a decision-support tool that helps responders prioritise and detect severe accidents that might otherwise be recognised too late.
+
 \begin{figure}[ht]
     \centering
 
