@@ -68,7 +68,7 @@
 % okay, start new numbering ... here is where it really starts
 \mainmatter
 
-\section{Application Area and Goals (0.5 pages)}
+\section{Application Area and Goals}
 
 Modern intelligent and connected vehicle systems, such as the mandatory European eCall service, are designed to automatically transmit crucial accident data to emergency centers when a crash occurs. These transmissions typically include location, timestamp, and the number of passengers but lack information on the severity of injuries: a critical shortcoming for emergency services, as this information is vital for prioritizing rescue efforts and optimizing medical response times.
 
@@ -173,18 +173,20 @@ For multi-vehicle accidents, the pipeline identifies the "antagonist" vehicle as
 \subsubsection{Location Deduplication}
 Contrary to the dataset description, multiple location entries were found for single accident IDs, likely due to first responders logging entries for every intersecting street. To resolve this, we implemented a \texttt{completeness\us score}. We assigned weights to critical columns (Road Category: 2.0, Speed Limit: 2.0, others: 1.0). For each accident, the location entry with the highest weighted score, indicating the most data-rich description of the scene, was selected, ensuring the model trains on the highest quality data available.
 
-\subsection{Handling Missing Values (Imputation Strategy)}
-We distinguished between "structural missingness" (values that should not exist) and "data quality missingness" (values that are unknown).
+\subsection{Feature Selection \& Cleaning}
+The dataset underwent a rigorous cleaning process. Invalid data, such as speed limits exceeding 130 km/h or negative values for age, were filtered out. We removed high-cardinality identifiers (IDs, address strings) and columns with excessive missingness (e.g., \texttt{width\us central\us reservation}) that offered little predictive value. Hereof, we distinguished between "structural missingness" (values that should not exist) and "data quality missingness" (values that are unknown).
 
 \begin{itemize}
-    \item \textbf{Structural Missingness:} Pedestrians, by definition, do not have a vehicle category or motor type. For these cases, we explicitly imputed a value of \texttt{-1} or \texttt{'none'} to indicate "Not Applicable," preventing the model from treating these as missing data.
-    \item \textbf{Data Quality Missingness:} For users who \textit{should} have data (e.g., drivers) but lack it, we imputed a value of \texttt{0} or \texttt{'Unknown'}.
+    \item \textbf{Structural Missingness:} Pedestrians, by definition, do not have a vehicle category or motor type. For these cases, we explicitly imputed a value of \texttt{-1} or \texttt{'none'} to indicate "Not Applicable". Missing values for the driver, indicating a hit and run, were imputed with \texttt{0} or \texttt{Unknown} to keep the information.
+    \item \textbf{Data Quality Missingness:} Columns with $\approx5\%$ missing values were dropped, alongside rows missing values in columns without special NaN meaning.
     \item \textbf{Other Vehicle Imputation:} If no opposing vehicle was involved, columns related to the "other" vehicle were set to \texttt{-1}. However, if a second vehicle ID existed but its characteristics were missing, we imputed \texttt{Unknown} to differentiate this state from single-vehicle accidents.
 \end{itemize}
-Finally, rows missing the target variable \texttt{injury\us severity} were dropped, as they cannot be used for supervised learning.
+
+Rows missing the target variable \texttt{injury\us severity} were dropped as well, as they cannot be used for supervised learning.
+In addition, an isolation forest was used for simple outlier elimination considering the dataset's size.
 
 \subsection{Feature Engineering}
-To capture complex non-linear relationships, we generated 34 new features across four domains.
+To capture complex non-linear relationships, we generated 34 new features across four domains. The final dataset consists of 57 refined features ready for the modeling pipeline.
 
 \subsubsection{Temporal Cyclical Features}
 Raw timestamps are ill-suited for many models due to the discontinuity between 23:59 and 00:00. We decomposed time into cyclical components using Sine and Cosine transformations for hours, days of the week, and months. Additionally, we bucketed hours into a \texttt{time\us of\us day} feature (Night, Morning Rush, Midday, Evening Rush) to assist tree-based models in identifying high-level patterns.
@@ -203,15 +205,15 @@ Complementing this, a binary \texttt{surface\us quality\us indicator} was create
 Vehicle categories were simplified from over 30 specific codes into 6 broad classes (Bicycle, Powered 2-3 Wheeler, Light Motor Vehicle, HGV/Truck, Bus/Coach, Other) to reduce dimensionality.
 For users, we transformed the \texttt{year\us of\us birth} into an \texttt{age} feature and further binned it into sociologically relevant \texttt{age\us groups} (e.g., Child/Teen, Senior). Safety equipment flags (seatbelts, helmets, airbags) were consolidated from three separate columns into binary "Used/Not Used" indicators to resolve data sparsity.
 
-\subsection{Feature Selection \& Cleaning}
-Following engineering, the dataset underwent a rigorous cleaning process. Invalid data, such as speed limits exceeding 130 km/h or negative values for age, were filtered out. We removed high-cardinality identifiers (IDs, address strings) and columns with excessive missingness (e.g., \texttt{width\us central\us reservation}) that offered little predictive value.
-Crucially, the raw target variable \texttt{injury\us severity} (4 classes) was re-mapped to an ordinal \texttt{injury\us target} (0: Uninjured, 1: Light Injury, 2: Hospitalized/Dead) to address class imbalance and better reflect the triage needs of first responders. The final dataset consists of 57 refined features ready for the modeling pipeline.
+\subsection{Resampling}
+Regarding the target value of injury severity, the dataset exhibits a clear class imbalance towards less severe cases (47\% non-injured, 36\% injured, and 16\% heavily injured) biasing models trained towards the majority class. To address this, the raw target variable \texttt{injury\us severity} (4 classes) was re-mapped to an ordinal \texttt{injury\us target} (0: Uninjured, 1: Light Injury, 2: Hospitalized/Dead), both adjusting for updates received up to 30 days afterwards and better reflecting the triage needs of first responders.
+
+Given the importance of correctly assessing cases of heavy injury, resampling was applied to the dataset to remove class imbalance.
+Both over- (SMOTE) and undersampling were considered and tested. Given the large amount of data at disposal (\textgreater400k) and considering compute constraints, random undersampling (130k) was ultimately chosen.
 
 \section{Data Mining}
 \label{sec:dm}
-
-\subsection{Experimental Setup}
-We partition the dataset into a training set (2019–2022) and a test set (2023). Our primary evaluation metric is the macro F1-score, chosen to prioritize recall for the critical "severely injured" class without introducing the sensitivity of arbitrary cost matrices. Instead of using a simple majority-vote baseline, we implemented a domain-specific baseline that relies exclusively on the speed-limit feature to predict accident severity:
+We partition the dataset into a training set (2019-2022) and a test set (2023). Our primary evaluation metric is the macro F1-score, chosen to prioritize recall for the critical "severely injured" class without introducing the sensitivity of arbitrary cost matrices. Instead of using a simple majority-vote baseline, we implemented a domain-specific baseline that relies exclusively on the speed-limit feature to predict accident severity:
 \[
 \hat{y} =
 \begin{cases}
@@ -245,19 +247,19 @@ While the first is Logistic Regression with applied L2-regularization and the se
 
 \begin{table}[tb]
   \centering
-  \begin{tabularx}{\textwidth}{l l X c}
+  \begin{tabularx}{\textwidth}{@{} l l c c c @{}}
     \toprule
-    \textbf{Model} & \textbf{Hyperparameter} & \textbf{Search Space} & \textbf{Optimal Value} \\
+    \textbf{Model} & \textbf{Hyperparameter} & \textbf{Search Space} & \textbf{Best Value} & \textbf{F1-Macro}\\
     \midrule
-    \textbf{Ridge} & alpha & $\{0.05, 0.10, \dots, 10\}$ & 1.5 \\
+    \textbf{Ridge} & alpha & $\{0.05, 0.10, \dots, 10\}$ & 1.5 & 0.654\\
     \midrule
-    \textbf{BRF} & n\_estimators & $[50,\,400] \cap \mathbb{Z}$ & 400 \\
+    \textbf{BRF} & n\_estimators & $[50,\,400] \cap \mathbb{Z}$ & 400 & 0.674\\
     & max\_depth & $\{3, \dots, 20\}$ & 18 \\
     & min\_samples\_leaf & $\{1, \dots, 20\}$ & 1 \\
     & replacement & \{\texttt{True}, \texttt{False}\} & \texttt{False} \\
     & sampling\_strategy & \{\texttt{all}, \texttt{not minority}\} & \texttt{all} \\ 
     \midrule
-    \textbf{CatBoost} & iterations & $\{1000, \dots, 5000\}$ & 4139 \\
+    \textbf{CatBoost} & iterations & $\{1000, \dots, 5000\}$ & 4139 & 0.696 \\
     & learning\_rate & $[0.01,\,0.2]$ & 0.01 \\
     & depth & $\{4, \dots, 10\}$ & 10 \\
     & l2\_leaf\_reg & $[10^{-2},\,10]$ & 0.1887 \\
@@ -270,9 +272,9 @@ While the first is Logistic Regression with applied L2-regularization and the se
 
 Considering the size of our dataset and computational constraints, model selection in terms of hyperparameter tuning was conducted for each model using 3-fold cross validation with shuffling to avoid biases from the original ordering, utilizing Bayesian Optimization and F1-Macro for the ensembles. While Ridge Regression could only be tuned regarding its regularization strength $\alpha$, both ensemble methods offered more options regarding tree pruning relevant for avoiding overfitting. \autoref{tab:hyperparams} shows the hyperparameters considered.
 %
-Approaches selection was similarly achieved using both F1-Macro and confusion matrices, used to evaluate recall/misclassifications on (high) injury cases, with the same 3-fold cross validation.
+Selection was similarly achieved using both F1-Macro and confusion matrices, used to evaluate recall/misclassifications on (high) injury cases, with the same 3-fold cross validation. Given our results, CatBoost would be selected. 
 
-\subsection{Clustering Strategy}
+\subsection{Clustering: Strategy}
 To identify distinct "Accident Personas," we explored four clustering algorithms, each chosen for a specific capability:
 
 \begin{itemize}
@@ -291,19 +293,160 @@ To derive meaningful profiles from the clustered dataset, we conducted a structu
 
 \section{Evaluation}
 
-\subsection{Hyperparameter Tuning}
-We optimized hyperparameters using macro-F1 as the objective function. For the \textbf{Ridge classifier}, a grid search yielded an optimal regularization parameter $\alpha=2.0$.
-For the ensemble models, we employed Bayesian Optimization (30 iterations) with stratified 3-fold cross-validation.
+% \subsection{Hyperparameter Tuning}
+% We optimized hyperparameters using macro-F1 as the objective function. For the \textbf{Ridge classifier}, a grid search yielded an optimal regularization parameter $\alpha=2.0$.
+% For the ensemble models, we employed Bayesian Optimization (30 iterations) with stratified 3-fold cross-validation.
 
-The tuning process for the \textbf{Balanced Random Forest} revealed that a high model complexity was necessary to capture the nuances of severe accidents. The optimal configuration required a large number of estimators ($n=400$) and a significant maximum depth ($depth=18$). Furthermore, we found that disabling replacement in the bootstrap sampling improved diversity among the trees.
+% The tuning process for the \textbf{Balanced Random Forest} revealed that a high model complexity was necessary to capture the nuances of severe accidents. The optimal configuration required a large number of estimators ($n=400$) and a significant maximum depth ($depth=18$). Furthermore, we found that disabling replacement in the bootstrap sampling improved diversity among the trees.
 
-In contrast, the optimization for \textbf{CatBoost} converged towards parameters that mitigated overfitting. The optimal learning rate was relatively low ($0.0194$), and the depth was moderate ($10$). The regularization parameter ($l2\_leaf\_reg=0.01$) suggested that the model relied heavily on the natural structure of the categorical splits rather than aggressive weight penalties.
+% In contrast, the optimization for \textbf{CatBoost} converged towards parameters that mitigated overfitting. The optimal learning rate was relatively low ($0.0194$), and the depth was moderate ($10$). The regularization parameter ($l2\_leaf\_reg=0.01$) suggested that the model relied heavily on the natural structure of the categorical splits rather than aggressive weight penalties.
 
-\subsection{Classifier Evaluation}
-We evaluated the models on the held-out test set (2023). This dataset preserves the natural distribution of the problem (47\% non-injured, 36\% injured, 16\% heavily injured). We report class-wise precision, recall, and F1-scores. This granular evaluation is critical because a high global accuracy could hide a model's failure to detect severe injuries: the most costly error in our domain.
+\subsection{Classification}
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=\textwidth]{images/confusion_matrices_comparison.pdf}
+    \caption{Generalization Performance: Confusion Matrices}
+    \label{fig:confusion_matrices}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccccccccc}
+\toprule
+\textbf{} 
+    & \multicolumn{3}{c}{\textbf{RC}} 
+    & \multicolumn{3}{c}{\textbf{BRF}} 
+    & \multicolumn{3}{c}{\textbf{CB}}
+    & \multicolumn{3}{c}{\textbf{BL}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
+& P & R & F1
+& P & R & F1
+& P & R & F1
+& P & R & F1 \\
+\midrule
+
+\textbf{Uninjured}
+& 0.84 & 0.72 & 0.78 
+& 0.88 & 0.72 & 0.79
+& 0.88 & 0.73 & 0.80
+& 0.50 & 0.64 & 0.56 \\
+
+\textbf{Injured}
+& 0.59 & 0.46 & 0.52
+& 0.62 & 0.63 & 0.63
+& 0.63 & 0.60 & 0.62
+& 0.34 & 0.30 & 0.32 \\
+
+\textbf{Severe} 
+& 0.40 & 0.77 & 0.53
+& 0.47 & 0.70 & 0.56
+& 0.46 & 0.73 & 0.57
+& 0.16 & 0.08 & 0.10 \\
+\midrule
+
+\textbf{Macro F1}
+& \multicolumn{3}{c}{0.61} 
+& \multicolumn{3}{c}{0.66} 
+& \multicolumn{3}{c}{0.66} 
+& \multicolumn{3}{c}{0.33} \\
+
+\textbf{Cohen's $\kappa$}
+& \multicolumn{3}{c}{0.59} 
+& \multicolumn{3}{c}{0.63} 
+& \multicolumn{3}{c}{0.6342} 
+& \multicolumn{3}{c}{0.0910} \\
+
+% \textbf{Macro AUC}
+% & \multicolumn{3}{c}{-}
+% & \multicolumn{3}{c}{0.72296}
+% & \multicolumn{3}{c}{0.72929}
+% & \multicolumn{3}{c}{-} \\
+
+% \textbf{Micro AUC}
+% & \multicolumn{3}{c}{-}
+% & \multicolumn{3}{c}{0.78559}
+% & \multicolumn{3}{c}{0.80404}
+% & \multicolumn{3}{c}{-} \\
+\bottomrule
+\end{tabular}
+
+\caption{\small Test Performance: Ridge Classifier, Balanced Random Forest, CatBoost, Baseline.}
+\label{tab:model_comparison}
+\end{table}
+
+The models were evaluated on the held-out test set (2023) which exhibits a similar target value distribution as the previous years, thus naturally ensuring stratification. For the hyperparameters, the choices listed in \autoref{tab:hyperparams} found during model selection were chosen. Each model was systematically evaluated using an automated pipeline for reporting the metrics listed in \autoref{tab:model_comparison}. Cohen's kappa was additionally included to evaluate ordinal performance.
+
+%\subsubsection{Performance Metrics}
+CatBoost achieves the highest F1 and Cohen’s $\kappa$, followed by BRF and RC, while the baseline performs substantially worse, following the results obtained in model selection.\\
+While models reliably predict low severity cases (e.g. F1 $[0.78, 0.80]$), differentiation between injured and heavily injured cases remains challenging, contributing the most to performance lost. 
+
+\autoref{fig:confusion_matrices} yields clearer insight into the classification errors made. While all models seldom conduct greater misclassifications (uninjured vs. heavily injured), the line between injured and heavily injured is non-well defined, resulting mix-ups between the two. 
+
+Later iterations of the data mining process focused tried to alleviate this issue through various means, including OneVsOne, hierarchical (first 0 vs {1,2}, then 1 vs 2) and stacking classification, as well as regression with custom threshold, but were unable to achieve meaningful improvements.
+%
+Considering this result and based on the misclassification costs involved, model training and selection could be altered to prefer one over the other, depending on the exact requirements.
+
+\subsubsection{Feature Importance Analysis}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{} cXXX @{}}
+\toprule
+\textbf{Rank} & \textbf{RC} & \textbf{BRF} & \textbf{CB} \\
+\midrule
+\textbf{1} & mobile\_obstacle\_struck\_1        & mobile\_obstacle\_struck      & type\_of\_collision       \\
+\textbf{2} & vehicle\_category\_other\_none  & impact\_delta                        & mobile\_obstacle\_struck\\
+\textbf{3} & sex\_2 (Female)                            & fixed\_obstacle\_struck        & age\_group                  \\
+\textbf{4} & mobile\_obstacle\_struck\_4        & type\_of\_collision                  & initial\_point\_of\_impact\\
+\textbf{5} & vehicle\_2\_3\_wheeler                & speed\_limit                         & speed\_limit\\
+\bottomrule
+\end{tabularx}
+\caption{\small Feature Importances per Classifier}
+\label{tab:feature_importance}
+\end{table}
+
+\autoref{tab:feature_importance} lists the top three features per model. Ridge importance is derived from coefficient magnitudes, BRF importance from mean decrease in impurity, and CatBoost importance from built-in feature attribution.
+%
+Feature importance analysis shows that the comparison of vehicles involved in an accident matters heavily for injury prediction, as denoted by the reappearance of \texttt{mobile\_obstacle\_struck} (\texttt{mos}) in all classifiers or inclusion of \texttt{impact\_delta} in BRF. A pedestrian or train being struck by oneself is a strong indicator for the well-being of the former or the later (\texttt{mos\_1 and 4}). Additionally, as denoted by \texttt{type\_of\_collision} and \texttt{initial\_point\_of\_impact}, the exact impact side of a vehicle is together with the vehicles speed is highly relevant for prediction as well. 
+
+
+
+% \textbf{1} & mobile\_obstacle\_struck\_1 & vehicle\_category\_other\_none & num\_light\_motor\_vehicle \\
+% \textbf{BRF} & mobile\_obstacle\_struck & impact\_delta & fixed\_obstacle\_struck \\
+% \textbf{CB} & type\_of\_collision & mobile\_obstacle\_struck & age\_group \\
+
+% Ridge emphasizes vehicle counts, BRF highlights collision type and impact intensity, and CatBoost leverages a broader mix of demographic, situational, and crash-mechanics variables, which likely contributes to its superior performance.
+
+% CatBoost performing best. The \textbf{Injured} class is more ambiguous, with many misclassifications toward Uninjured or Severe, while \textbf{Severely Injured} cases are generally identified correctly, though models tend to overpredict this class.  Figure~\ref{fig:three_images} shows the normalized confusion matrices, highlighting these consistent patterns across models.
+
+% This dataset preserves the natural distribution of the problem (47\% non-injured, 36\% injured, 16\% heavily injured). We report class-wise precision, recall, and F1-scores. This granular evaluation is critical because a high global accuracy could hide a model's failure to detect severe injuries: the most costly error in our domain.
 
 
 \subsection{Clustering Evaluation}
+
+\begin{table}[h!]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{c X}
+        \toprule
+        \textbf{Cluster} & \textbf{Persona Description} \\
+        \midrule
+        \textbf{0} & Midday pedestrian-related accidents with older road users in semi-urban areas. \\[1mm]
+        \textbf{1} & Night-time accidents involving younger adults (18-30 years) under low visibility. \\[1mm]
+        \textbf{2} & Morning rush-hour collisions linked to commuter traffic and congestion. \\[1mm]
+        \textbf{3} & High-complexity urban intersection accidents with notable pedestrian involvement. \\[1mm]
+        \textbf{4} & Low-speed urban maneuver collisions (parking, turning) in narrow streets, usually minor but risky for vulnerable users. \\[1mm]
+        \bottomrule
+    \end{tabularx}
+    \caption{Identified accident personas (features with lift $>1.5$).}
+    \label{tab:cluster_personas}
+\end{table}
+
+
 Clustering performance was assessed via Silhouette scores (Table~\ref{tab:cluster_results}). While HDBSCAN and Agglomerative Clustering yielded higher raw scores ($>0.08$), deeper inspection revealed they produced degenerate solutions where over 85\% (HDBSCAN) or 100\% (Agglomerative) of the data collapsed into a single giant cluster. Such partitions offer no analytical value for differentiating accident types. 
 In contrast, K-Prototypes with $k=5$ produced a more balanced distribution (largest cluster $\approx 39\%$) with clear semantic distinctions, offering the best trade-off between mathematical cohesion and practical interpretability.
 
@@ -328,147 +471,9 @@ HDBSCAN        & 10 & 0.089 & 85.4 \\
 \subsection{Identified Accident Personas}
 Clustering analysis revealed five accident personas (features with lift $>1.5$):
 
-\begin{table}[h!]
-    \centering
-    \small
-    \begin{tabularx}{\textwidth}{c X}
-        \toprule
-        \textbf{Cluster} & \textbf{Persona Description} \\
-        \midrule
-        \textbf{0} & Midday pedestrian-related accidents with older road users in semi-urban areas. \\[1mm]
-        \textbf{1} & Night-time accidents involving younger adults (18–30 years) under low visibility. \\[1mm]
-        \textbf{2} & Morning rush-hour collisions linked to commuter traffic and congestion. \\[1mm]
-        \textbf{3} & High-complexity urban intersection accidents with notable pedestrian involvement. \\[1mm]
-        \textbf{4} & Low-speed urban maneuver collisions (parking, turning) in narrow streets, usually minor but risky for vulnerable users. \\[1mm]
-        \bottomrule
-    \end{tabularx}
-    \caption{Identified accident personas (features with lift $>1.5$).}
-    \label{tab:cluster_personas}
-\end{table}
-
-% \begin{itemize}
-%     \item \textbf{Cluster 0:} Midday pedestrian-related accidents with older road users in semi-urban areas.
-%     \item \textbf{Cluster 1:} Night-time accidents involving younger adults (18–30 years) under low visibility.
-%     \item \textbf{Cluster 2:} Morning rush-hour collisions linked to commuter traffic and congestion.
-%     \item \textbf{Cluster 3:} High-complexity urban intersection accidents with notable pedestrian involvement.
-%     \item \textbf{Cluster 4:} Low-speed urban maneuver collisions (parking, turning) in narrow streets, usually minor but risky for vulnerable users.
-% \end{itemize}
-
-\subsection{Classification Results}
-This section presents the performance of the three trained classification models.
-A summary of the core evaluation metrics is provided in table \ref{tab:model_comparison}.
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{6pt}
-\begin{tabular}{lcccccccccccc}
-\toprule
-\textbf{} 
-    & \multicolumn{3}{c}{\textbf{RC}} 
-    & \multicolumn{3}{c}{\textbf{BRF}} 
-    & \multicolumn{3}{c}{\textbf{CB}}
-    & \multicolumn{3}{c}{\textbf{BL}} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
-& P & R & F1
-& P & R & F1
-& P & R & F1
-& P & R & F1 \\
-\midrule
-
-\textbf{Uninjured}
-& 0.83 & 0.74 & 0.78 
-& 0.87 & 0.73 & 0.80
-& 0.85 & 0.77 & 0.81
-& 0.50 & 0.64 & 0.56 \\
-
-\textbf{Injured}
-& 0.62 & 0.50 & 0.55
-& 0.63 & 0.61 & 0.62
-& 0.64 & 0.63 & 0.64
-& 0.34 & 0.30 & 0.32 \\
-
-\textbf{Severe} 
-& 0.42 & 0.74 & 0.54
-& 0.47 & 0.72 & 0.56
-& 0.51 & 0.65 & 0.57
-& 0.16 & 0.08 & 0.10 \\
-\midrule
-
-\textbf{Macro F1}
-& \multicolumn{3}{c}{0.62} 
-& \multicolumn{3}{c}{0.66} 
-& \multicolumn{3}{c}{0.67} 
-& \multicolumn{3}{c}{0.33} \\
-
-\textbf{Micro F1}
-& \multicolumn{3}{c}{0.66} 
-& \multicolumn{3}{c}{0.69} 
-& \multicolumn{3}{c}{0.71} 
-& \multicolumn{3}{c}{0.40} \\
-
-\textbf{Cohen's Kappa}
-& \multicolumn{3}{c}{0.6021} 
-& \multicolumn{3}{c}{0.6343} 
-& \multicolumn{3}{c}{0.6488} 
-& \multicolumn{3}{c}{0.0910} \\
-
-\textbf{Macro AUC}
-& \multicolumn{3}{c}{-}
-& \multicolumn{3}{c}{0.72296}
-& \multicolumn{3}{c}{0.72929}
-& \multicolumn{3}{c}{-} \\
-
-\textbf{Micro AUC}
-& \multicolumn{3}{c}{-}
-& \multicolumn{3}{c}{0.78559}
-& \multicolumn{3}{c}{0.80404}
-& \multicolumn{3}{c}{-} \\
-\bottomrule
-\end{tabular}
-
-\caption{\small Test Performance: Ridge Classifier, Balanced Random Forest, CatBoost, Baseline.}
-\label{tab:model_comparison}
-\end{table}
-
-\subsubsection{Performance Metrics}
-CatBoost achieves the highest macro and micro F1 and Cohen’s $\kappa$, followed by BRF and RC, while the baseline performs substantially worse. \\
-All models predict \textbf{Uninjured} cases reliably, with CatBoost performing best. The \textbf{Injured} class is more ambiguous, with many misclassifications toward Uninjured or Severe, while \textbf{Severely Injured} cases are generally identified correctly, though models tend to overpredict this class.  Figure~\ref{fig:three_images} shows the normalized confusion matrices, highlighting these consistent patterns across models.
-
-\begin{figure}[tb]
-    \centering
-    \includegraphics[width=\textwidth]{images/confusion_matrices_comparison.pdf}
-    \caption{Generalization Performance: Confusion Matrices}
-    \label{fig:confusion_matrices}
-\end{figure}
 
 Micro and macro AUC scores confirm that CatBoost produces the most separable precision-recall curves (micro\_AUC=0.80404; macro\_AUC=0.72929), slightly outperforming the Balanced Random Forest (micro\_AUC = 0.78559, macro\_AUC = 0.72296). Ridge and the baseline cannot be evaluated due to lack of calibrated probabilities. 
-\subsubsection{Feature importance}
-Table~\ref{tab:feature_importance} lists the top three features per model. Ridge emphasizes vehicle counts, BRF highlights collision type and impact intensity, and CatBoost leverages a broader mix of demographic, situational, and crash-mechanics variables, which likely contributes to its superior performance.
 
-\begin{table}[t]
-\centering
-\small
-\begin{tabularx}{\textwidth}{@{} lXXX @{}}
-\toprule
-\textbf{Model} & \textbf{Feature 1} & \textbf{Feature 2} & \textbf{Feature 3} \\
-\midrule
-\textbf{RC}
-    & mobile\_obstacle\_struck\_1
-    & vehicle\_category\_other\_none
-    & num\_light\_motor\_vehicle \\
-\textbf{BRF}
-    & mobile\_obstacle\_struck
-    & impact\_delta
-    & fixed\_obstacle\_struck \\
-\textbf{CB}
-    & type\_of\_collision
-    & mobile\_obstacle\_struck
-    & age\_group \\
-\bottomrule
-\end{tabularx}
-\caption{\small Three most important features identified by each classifier. Ridge importance is derived from coefficient magnitudes, BRF importance from mean decrease in impurity, and CatBoost importance from built-in feature attribution.}
-\label{tab:feature_importance}
-\end{table}
 
 \subsubsection{Summary}
 The results highlight the benefits of flexible, non-linear models, especially CatBoost, in capturing the complex interactions underlying road traffic injury severity.

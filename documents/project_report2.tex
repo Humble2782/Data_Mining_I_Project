@@ -176,6 +176,10 @@ For users, we transformed the \texttt{year\us of\us birth} into an \texttt{age} 
 Following engineering, the dataset underwent a rigorous cleaning process. Invalid data, such as speed limits exceeding 130 km/h or negative values for age, were filtered out. We removed high-cardinality identifiers (IDs, address strings) and columns with excessive missingness (e.g., \texttt{width\us central\us reservation}) that offered little predictive value.
 Crucially, the raw target variable \texttt{injury\us severity} (4 classes) was re-mapped to an ordinal \texttt{injury\us target} (0: Uninjured, 1: Light Injury, 2: Hospitalized/Dead) to address class imbalance and better reflect the triage needs of first responders. The final dataset consists of 57 refined features ready for the modeling pipeline.
 
+\subsection{Resampling}
+Regarding the target value of injury severity, the dataset exhibits a clear class imbalance towards less severe cases (47\% non-injured, 36\% injured, and 16\% heavily injured) biasing models trained towards the majority class. Given the importance of correctly assessing cases of heavy injury, resampling was applied to the dataset to remove class imbalance.
+Both over- (SMOTE) and undersampling were considered and tested. Given the large amount of data at disposal (over 400k) and considering compute constraints, random undersampling (130k) was ultimately chosen.
+
 \section{Data Mining}
 \label{sec:dm}
 We partition the dataset into a training set (2019–2022) and a test set (2023). Our primary evaluation metric is the macro F1-score, chosen to prioritize recall for the critical "severely injured" class without introducing the sensitivity of arbitrary cost matrices. Instead of using a simple majority-vote baseline, we implemented a domain-specific baseline that relies exclusively on the speed-limit feature to predict accident severity:

@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-
 
 def impute_nans_own_vehicle(df: pd.DataFrame) -> pd.DataFrame:
     """
