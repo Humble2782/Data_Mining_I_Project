@@ -258,6 +258,17 @@ HDBSCAN        & 10 & 0.089 & 85.4 \\
 
 \section{Results}
 
+\subsection{Identified Accident Personas}
+Clustering analysis revealed five accident personas (features with lift $>1.5$):
+
+\begin{itemize}
+    \item \textbf{Cluster 0:} Midday pedestrian-related accidents with older road users in semi-urban areas.
+    \item \textbf{Cluster 1:} Night-time accidents involving younger adults (18–30 years) under low visibility.
+    \item \textbf{Cluster 2:} Morning rush-hour collisions linked to commuter traffic and congestion.
+    \item \textbf{Cluster 3:} High-complexity urban intersection accidents with notable pedestrian involvement.
+    \item \textbf{Cluster 4:} Low-speed urban maneuver collisions (parking, turning) in narrow streets, usually minor but risky for vulnerable users.
+\end{itemize}
+
 \subsection{Classification Results}
 This section presents the performance of the three trained classification models.
 A summary of the core evaluation metrics is provided in table \ref{tab:model_comparison}.
@@ -334,27 +345,38 @@ A summary of the core evaluation metrics is provided in table \ref{tab:model_com
 \label{tab:model_comparison}
 \end{table}
 
-\subsubsection{Aggregate Metrics}
-Macro and micro F1-scores show that CatBoost performs best overall, achieving the strongest balance between minority and majority classes. BRF follows closely, with RC performing somewhat weaker while still substantially outperforming the baseline. Cohen’s κ confirms this ranking: CatBoost and BRF provide the highest agreement beyond chance, RC is slightly behind, and the baseline performs only marginally better than random guessing.
+\subsubsection{Performance Metrics}
+CatBoost achieves the highest macro and micro F1 and Cohen’s $\kappa$, followed by BRF and RC, while the baseline performs substantially worse. \\
+All models predict \textbf{Uninjured} cases reliably, with CatBoost performing best. The \textbf{Injured} class is more ambiguous, with many misclassifications toward Uninjured or Severe, while \textbf{Severely Injured} cases are generally identified correctly, though models tend to overpredict this class.  Figure~\ref{fig:three_images} shows the normalized confusion matrices, highlighting these consistent patterns across models.
 
+\begin{figure}[ht]
+    \centering
 
-\subsubsection{Per-Class Performance}
-The Uninjured class is consistently the easiest to predict, with all machine-learning models achieving high recall, and CatBoost performing best among them. For the Injured class, all models show weaker recall, indicating substantial overlap with the Uninjured and Severely Injured classes; CatBoost again performs strongest, while the Ridge classifier struggles most to correctly identify these cases. The Severely Injured class is the most challenging but also the most critical: all three learned models prioritise recall over precision, systematically preferring to overpredict severe cases rather than risk missing them, with CatBoost achieving the best overall balance.
-To better understand these classification patterns, Figure~\ref{fig:three_images} shows the row-normalized confusion matrices for all three models. Across models, broadly similar trends emerge. \textbf{Uninjured} cases are mostly classified correctly, with occasional confusion toward \textbf{Injured} and only rarely toward \textbf{Severe}. The \textbf{Injured} class is the most ambiguous, with frequent misclassifications both as Uninjured and Severe. \textbf{Severely Injured} cases are generally identified reliably, and when they are misclassified, they are usually assigned to the Injured class rather than Uninjured, which is desirable from a safety perspective.
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{ridge.png}
+        \caption{Ridge}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{random_forest.png}
+        \caption{Random forest}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{catboost.png}
+        \caption{Catboost}
+    \end{subfigure}
 
+    \caption{Confusion matrices for the three classifiers.}
+    \label{fig:three_images}
+\end{figure} 
+Micro and macro AUC scores confirm that CatBoost produces the most separable precision-recall curves (micro\_AUC=0.80404; macro\_AUC=0.72929), slightly outperforming the Balanced Random Forest (micro\_AUC = 0.78559, macro\_AUC = 0.72296). Ridge and the baseline cannot be evaluated due to lack of calibrated probabilities. 
+\subsubsection{Feature importance}
+Table~\ref{tab:feature_importance} lists the top three features per model. Ridge emphasizes vehicle counts, BRF highlights collision type and impact intensity, and CatBoost leverages a broader mix of demographic, situational, and crash-mechanics variables, which likely contributes to its superior performance.
 
-
-
-\subsubsection{Precision--Recall AUC}
-Since precision--recall curves are particularly informative for imbalanced classification tasks, we also 
-compute micro and macro AUC scores. AUC values could not be computed for the Ridge Classifier and baseline 
-because they do not output calibrated probabilistic predictions. Among the probabilistic models, CatBoost 
-achieves the highest micro AUC (0.80404) and macro AUC (0.72929), slightly outperforming the Balanced 
-Random Forest (micro AUC = 0.78559, macro AUC = 0.72296). These results indicate that CatBoost produces 
-more separable precision--recall curves and leads to better threshold-independent discrimination across 
-injury severity classes.
-
-\subsubsection{Feature Importance}
 \begin{table}[t]
 \centering
 \small
@@ -380,58 +402,10 @@ CB
 \caption{\small Top three most important features identified by each classifier. Ridge importance is derived from coefficient magnitudes, BRF importance from mean decrease in impurity, and CatBoost importance from built-in feature attribution.}
 \label{tab:feature_importance}
 \end{table}
-To interpret the models' decision-making behavior, Table~\ref{tab:feature_importance} summarizes the three most influential features per classifier. Feature importance was computed using model-specific methods: coefficient magnitudes for the Ridge Classifier, mean decrease in impurity for the Balanced Random Forest, and CatBoost’s internal attribution scores.
-
-Overall, the Ridge Classifier primarily relies on variables describing the number and types of vehicles involved, reflecting its focus on structural crash characteristics. The Balanced Random Forest emphasizes features related to the collision type and crash intensity, which aligns with its ability to capture nonlinear tree-based interactions. CatBoost, in contrast, highlights a more diverse mix of demographic, situational, and crash-mechanics features, indicating that it leverages broader and more heterogeneous information. This richer feature utilization likely contributes to its superior predictive performance.
-
 
 \subsubsection{Summary}
 The results highlight the benefits of flexible, non-linear models, especially CatBoost, in capturing the complex interactions underlying road traffic injury severity.
 The CatBoost confusion matrix shows that about 95\% of severely injured cases are at least classified as injured, so a real-time system could flag most severe accidents early and support faster emergency response. However, this comes at the cost of inefficient resource allocation, because also around 5\% of non-injury cases would be predicted as severely injured and trigger unnecessary deployments, illustrating a fundamental trade-off between saving lives and resource efficiency. Moreover, the remaining 5\% of severely injured cases that are predicted as uninjured are a critical limitation: such a system cannot replace emergency calls or human judgment but should instead be viewed as a decision-support tool that helps responders prioritize and detect severe accidents that might otherwise be recognized too late.
-
-
-\begin{figure}[ht]
-    \centering
-
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{ridge.png}
-        \caption{Ridge}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{random_forest.png}
-        \caption{Random forest}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{catboost.png}
-        \caption{Catboost}
-    \end{subfigure}
-
-    \caption{Confusion matrices for the three classifiers.}
-    \label{fig:three_images}
-\end{figure}
-
-\subsection{Identified Accident Personas}
-The clustering analysis successfully identified five distinct "accident personas," summarizing complex categorical patterns. These profiles were derived by analyzing features that showed a statistical lift $>1.5$ within each cluster.
-
-\subsubsection*{Cluster 0: Midday pedestrian-involved accidents with older road users}
-This cluster captures accidents occurring predominantly around midday in moderate traffic conditions. It is uniquely characterized by a disproportionate involvement of older road users and pedestrians. The accident locations often correlate with semi-urban environments where mixed traffic (pedestrians and vehicles) interacts during daylight hours.
-
-\subsubsection*{Cluster 1: Night-time accidents with younger adults}
-This profile describes accidents occurring during the night, marked by significantly reduced visibility and lighting conditions. The demographic analysis reveals a strong overrepresentation of younger adults (18–30 years). The lack of natural light appears to be a compounding risk factor, potentially amplifying the severity of incidents involving less experienced drivers.
-
-\subsubsection*{Cluster 2: Morning rush hour collisions}
-Collisions in this cluster are tightly synchronized with the morning peak hours (typically 07:00–09:00). They correlate strongly with high traffic density. The features suggest standard commuting accidents, likely involving rear-end collisions or minor impacts due to congestion, though the involvement of two-wheelers in rush hour traffic remains a severity risk.
-
-\subsubsection*{Cluster 3: High-speed urban location collisions}
-This cluster identifies high-frequency accidents occurring in urban settings, particularly at intersections. While the speeds are generally lower than rural accidents, the complexity of the road environment (intersections, crossings) is high. There is a distinct sub-pattern of pedestrian involvement, suggesting these are often vehicle-to-pedestrian conflicts at crossing points.
-
-\subsubsection*{Cluster 4: Low-speed urban maneuver collisions}
-Distinct from Cluster 3, these accidents are characterized by low-speed maneuvers in built-up areas, such as parking or turning in narrow streets. The specific "maneuver" features are highly predictive here. While the frequency of these accidents is high, the impact forces are typically lower, often resulting in vehicle damage rather than severe injury, though vulnerable users remain at risk.
 
 \newpage
 \section*{Ehrenwörtliche Erklärung}
