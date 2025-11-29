@@ -259,6 +259,178 @@ HDBSCAN        & 10 & 0.089 & 85.4 \\
 
 \section{Results}
 
+\subsection{Classification Results}
+This section presents the performance of the three trained classification models.
+A summary of the core evaluation metrics is provided in table \ref{tab:model_comparison}.
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccccccccc}
+\toprule
+\textbf{} 
+    & \multicolumn{3}{c}{\textbf{RC}} 
+    & \multicolumn{3}{c}{\textbf{BRF}} 
+    & \multicolumn{3}{c}{\textbf{CB}}
+    & \multicolumn{3}{c}{\textbf{BL}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
+& P & R & F1
+& P & R & F1
+& P & R & F1
+& P & R & F1 \\
+\midrule
+
+\textbf{Uninjured}
+& 0.83 & 0.74 & 0.78 
+& 0.87 & 0.73 & 0.80
+& 0.85 & 0.77 & 0.81
+& 0.50 & 0.64 & 0.56 \\
+
+\textbf{Injured}
+& 0.62 & 0.50 & 0.55
+& 0.63 & 0.61 & 0.62
+& 0.64 & 0.63 & 0.64
+& 0.34 & 0.30 & 0.32 \\
+
+\textbf{Severe} 
+& 0.42 & 0.74 & 0.54
+& 0.47 & 0.72 & 0.56
+& 0.51 & 0.65 & 0.57
+& 0.16 & 0.08 & 0.10 \\
+\midrule
+
+\textbf{Macro F1}
+& \multicolumn{3}{c}{0.62} 
+& \multicolumn{3}{c}{0.66} 
+& \multicolumn{3}{c}{0.67} 
+& \multicolumn{3}{c}{0.33} \\
+
+\textbf{Micro F1}
+& \multicolumn{3}{c}{0.66} 
+& \multicolumn{3}{c}{0.69} 
+& \multicolumn{3}{c}{0.71} 
+& \multicolumn{3}{c}{0.40} \\
+
+\textbf{Cohen's Kappa}
+& \multicolumn{3}{c}{0.6021} 
+& \multicolumn{3}{c}{0.6343} 
+& \multicolumn{3}{c}{0.6488} 
+& \multicolumn{3}{c}{0.0910} \\
+
+\textbf{Macro AUC}
+& \multicolumn{3}{c}{-}
+& \multicolumn{3}{c}{0.72296}
+& \multicolumn{3}{c}{0.72929}
+& \multicolumn{3}{c}{-} \\
+
+\textbf{Micro AUC}
+& \multicolumn{3}{c}{-}
+& \multicolumn{3}{c}{0.78559}
+& \multicolumn{3}{c}{0.80404}
+& \multicolumn{3}{c}{-} \\
+\bottomrule
+\end{tabular}
+
+\caption{\small Comparison of a Ridge Classifier (RC), Balanced Random Forest (BRF), CatBoost (CB), and a rule-based speed-limit baseline (BL). For each model, we report per-class precision (P), recall (R), and F1-score, as well as macro F1, weighted F1, and quadratically weighted Cohen's kappa (Kappa). Class supports in the test set are: Uninjured = 51{,}051, Injured = 39{,}476, and Severely Injured = 17{,}440.}
+\label{tab:model_comparison}
+\end{table}
+
+\subsubsection{Per-Class Performance}
+The \textbf{Uninjured} class is consistently the easiest to predict, with all machine learning models achieving recalls above 0.7. CatBoost performs best in this class (F1 = 0.81), benefiting from its ability to model nonlinear interactions between features. The BRF and RC models perform similarly (F1 = 0.80 and 0.78, respectively). The baseline severely underperforms, achieving only 0.56 F1. \\
+For the \textbf{Injured} class, all models exhibit weaker recall (0.50–0.63), suggesting substantial overlap with both the Uninjured and Severely Injured classes. CatBoost again achieves the strongest performance, with balanced precision and recall (0.64 and 0.63), whereas the RC struggles with low recall (0.50), indicating that many Injured cases are misclassified as Uninjured or Severe. \\
+The \textbf{Severely Injured} class displays the most interesting behavior: RC, BRF, and CB all achieve relatively high recall (0.65–0.74), but with lower precision (0.42–0.51). This reflects a consistent pattern across all models: they prefer to overpredict severe cases rather than risk missing them. Here, CatBoost achieves the highest F1-score (0.57).\\ \\
+To better understand these classification patterns, Figure~\ref{fig:three_images} shows the row-normalized confusion matrices for all three models, where each cell represents the proportion of true class instances assigned to each predicted label. \\
+Overall, similar trends appear across models. \textbf{Uninjured} cases are mainly confused with \textbf{Injured} (17–20\% for RC and BRF, 18\% for CatBoost), while confusion with the Severe class remains low (5–8\%). The \textbf{Injured} class shows the highest ambiguity, with substantial confusion toward Severe (34\% for RC, 27\% for BRF, 21\% for CatBoost) and some toward Uninjured (12–17\%). \textbf{Severely Injured} instances are generally identified reliably (65–74\%), with most misclassifications shifting toward Injured (19–29\%), and very few toward Uninjured (4–7\%), which is desirable from a safety standpoint.
+
+
+\subsubsection{Aggregate Metrics}
+Macro and micro F1-scores provide an overall assessment of model performance across classes. CatBoost 
+achieves the highest macro F1 (0.67) and micro F1 (0.71), indicating strong performance both in balancing 
+minority and majority classes and in overall classification accuracy. BRF follows closely with a macro F1 
+of 0.66 and a micro F1 of 0.69, while RC performs slightly worse (macro F1 = 0.62, micro F1 = 0.66). 
+The baseline is substantially weaker, achieving only 0.33 macro F1 and 0.40 micro F1.
+
+Cohen's $\kappa$ further confirms these trends. CatBoost attains the highest agreement beyond chance 
+($\kappa = 0.6488$), followed by BRF ($\kappa = 0.6343$) and RC ($\kappa = 0.6021$). The baseline performs 
+close to chance level ($\kappa = 0.0910$), reinforcing its inadequacy as a predictive model.
+
+\subsubsection{Precision--Recall AUC}
+Since precision--recall curves are particularly informative for imbalanced classification tasks, we also 
+compute micro and macro AUC scores. AUC values could not be computed for the Ridge Classifier and baseline 
+because they do not output calibrated probabilistic predictions. Among the probabilistic models, CatBoost 
+achieves the highest micro AUC (0.80404) and macro AUC (0.72929), slightly outperforming the Balanced 
+Random Forest (micro AUC = 0.78559, macro AUC = 0.72296). These results indicate that CatBoost produces 
+more separable precision--recall curves and leads to better threshold-independent discrimination across 
+injury severity classes.
+
+\subsubsection{Feature Importance}
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Feature 1} & \textbf{Feature 2} & \textbf{Feature 3} \\
+\midrule
+RC
+    & num\_powered\_2\_3\_wheeler 
+    & num\_light\_motor\_vehicle
+    & mobile\_obstacle\_struck \\
+BRF
+    & mobile\_obstacle 
+    & impact\_delta 
+    & fixed\_obstacle \\
+CB
+    & age\_group 
+    & point\_of\_impact 
+    & day\_of\_week \\
+\bottomrule
+\end{tabular}
+\caption{\small Top three most important features identified by each classifier. Ridge importance is derived from coefficient magnitudes, BRF importance from mean decrease in impurity, and CatBoost importance from built-in feature attribution.}
+\label{tab:feature_importance}
+\end{table}
+To interpret the models' decision-making behavior, Table~\ref{tab:feature_importance} summarizes the three most influential features per classifier. Feature importance was computed using model-specific methods: coefficient magnitudes for the Ridge Classifier, mean decrease in impurity for the Balanced Random Forest, and CatBoost’s internal attribution scores.
+
+Overall, the Ridge Classifier primarily relies on variables describing the number and types of vehicles involved, reflecting its focus on structural crash characteristics. The Balanced Random Forest emphasizes features related to the collision type and crash intensity, which aligns with its ability to capture nonlinear tree-based interactions. CatBoost, in contrast, highlights a more diverse mix of demographic, situational, and crash-mechanics features, indicating that it leverages broader and more heterogeneous information. This richer feature utilization likely contributes to its superior predictive performance.
+
+
+
+\subsubsection{Summary}
+Overall, CatBoost consistently yields the best results across nearly all metrics, particularly for the 
+challenging \emph{Injured} and \emph{Severely Injured} classes. The Balanced Random Forest performs 
+comparably well and represents a strong traditional machine learning baseline. The Ridge Classifier is 
+competitive despite its simplicity but shows clear limitations relative to tree-based models. The rule-based 
+speed-limit baseline performs poorly, underscoring that injury severity prediction requires substantially 
+richer information than road speed limits alone.
+
+These results highlight the benefits of flexible, non-linear models—especially CatBoost—in capturing the 
+complex interactions underlying road traffic injury severity.
+
+\begin{figure}[ht]
+    \centering
+
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{ridge.png}
+        \caption{Ridge}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{random_forest.png}
+        \caption{Random forest}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{catboost.png}
+        \caption{Catboost}
+    \end{subfigure}
+
+    \caption{Confusion matrices for the three classifiers.}
+    \label{fig:three_images}
+\end{figure}
+
 \subsection{Identified Accident Personas}
 The clustering analysis successfully identified five distinct "accident personas," summarizing complex categorical patterns. These profiles were derived by analyzing features that showed a statistical lift $>1.5$ within each cluster.
 
