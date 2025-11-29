@@ -1,17 +1,16 @@
 import pandas as pd
 
+
 # --- User Data Transformations ---
-def process_users(df_users):
-    """Processes user data to create new features like role, age, etc."""
+def process_users(df_users, df_year_of_occurence):
     print("  Processing user data...")
     df_users_copy = df_users.copy()
 
     # User and vehicle ids can have whitespaces in decimal places --> Remove
     user_remove_whitespace = ['id_user', 'id_vehicle']
     for column in user_remove_whitespace:
-        if column in df_users.columns: 
-            df_users_copy[column] = df_users_copy[column].str.replace(r'\s+', '', regex=True)
-            df_users_copy[column] = pd.to_numeric(df_users_copy[column], errors='coerce')
+        df_users_copy[column] = df_users_copy[column].str.replace(r'\s+', '', regex=True)
+        df_users_copy[column] = pd.to_numeric(df_users_copy[column], errors='coerce')
 
     return df_users_copy
 
@@ -25,9 +24,8 @@ def process_vehicles(df_vehicles):
     # vehicle id can have whitespaces within --> Remove
     vehicle_remove_whitespace = ['id_vehicle']
     for column in vehicle_remove_whitespace:
-        if column in vehicle_remove_whitespace:
-            df_vehicles_copy[column] = df_vehicles_copy[column].str.replace(r'\s+', '', regex=True)
-            df_vehicles_copy[column] = pd.to_numeric(df_vehicles_copy[column], errors='coerce')
+        df_vehicles_copy[column] = df_vehicles_copy[column].str.replace(r'\s+', '', regex=True)
+        df_vehicles_copy[column] = pd.to_numeric(df_vehicles_copy[column], errors='coerce')
 
     # Consolidate all the categories into 6 primary ones
     def simplify_catv_6(x):
