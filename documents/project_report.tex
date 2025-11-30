@@ -297,14 +297,14 @@ To derive meaningful profiles from the clustered dataset, we conducted a structu
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{images/confusion_matrices_row.png}
+    \includegraphics[width=\textwidth]{images/confusion_matrices_row.pdf}
     \caption{Generalization Performance: Confusion Matrices}
     \label{fig:confusion_matrices}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{images/PR_curves_row.png}
+    \includegraphics[width=\textwidth]{images/precision_recall_row.pdf}
     \caption{Generalization Performance: PR-Curves}
     \label{fig:pr_curves}
 \end{figure}
@@ -479,9 +479,13 @@ HDBSCAN        & 10 & 0.089 & 85.4 \\
 \end{table}
 
 \section{Results}
-Micro and macro AUC scores identify CatBoost as the optimal candidate for the targeted real-time telematics application, yielding the most separable precision-recall curves ($\text{micro\_AUC}=0.80$; $\text{macro\_AUC}=0.73$). It slightly outperforms the Balanced Random Forest, validating the necessity of flexible, non-linear models to capture complex injury risks within the ONISR data.
+Initial model selection via cross validated F1-Macro, later affirmed in model evaluation via F1-Macro, Cohen's Kappa and AUC scores, identify CatBoost as the optimal candidate for the targeted real-time telematics application, yielding the most separable precision-recall curves (\autoref{fig:pr_curves}). Outperforming the Ridge Classifier, it validates the necessity of flexible, non-linear models to capture complex injury risks within the ONISR data.
 
-In the context of eCall goals, the results illustrate a critical balance between safety and efficiency. CatBoost classifies $\approx 95\%$ of severely injured cases as at least injured, directly meeting the primary objective of accelerating medical response for high-risk accidents. However, this sensitivity incurs a cost in resource allocation, as $\approx 5\%$ of non-injury cases are predicted as severe, potentially triggering unnecessary deployments. Furthermore, the misclassification of the remaining 5\% of severe cases confirms that the system cannot replace human judgment. Instead, it serves as a decision-support tool, enhancing emergency coordination by flagging severe accidents that standard protocols might recognize too late.
+% It slightly outperforms the Balanced Random Forest, validating the necessity of flexible, non-linear models to capture complex injury risks within the ONISR data.
+
+% Micro and macro AUC scores identify CatBoost as the optimal candidate for the targeted real-time telematics application, yielding the most separable precision-recall curves ($\text{micro\_AUC}=0.80$; $\text{macro\_AUC}=0.73$). It slightly outperforms the Balanced Random Forest, validating the necessity of flexible, non-linear models to capture complex injury risks within the ONISR data.
+
+In the context of eCall goals, the results illustrate a critical balance between safety and efficiency. CatBoost classifies $\approx96\%$ of severely injured cases as at least injured, directly meeting the primary objective of accelerating medical response for high-risk accidents. However, this sensitivity incurs a cost in resource allocation, as $\approx7\%$ of non-injury cases are predicted as severe, potentially triggering unnecessary deployments. Furthermore, the misclassification of the remaining $\approx3\%$ of severe cases confirms that the system cannot replace human judgment. Instead, it serves as a decision-support tool, enhancing emergency coordination by flagging severe accidents that standard protocols might recognize too late.
 
 \newpage
 \section*{Ehrenwörtliche Erklärung}
@@ -502,8 +506,9 @@ Erklärung rechtliche Folgen haben wird.
     \toprule
     Tool & Purpose & Where? & Useful? \\
     \midrule
+    Gemini 2.5/3 Pro & Translation &  column\_description.pdf & +++\\
     Gemini 2.5/3 Pro & Rephrasing & Throughout & +++ \\
-    Gemini 2.5/3 Pro & Code Generation and Code Debugging & Throughout & +++ \\
+    Gemini 2.5/3 Pro & Code Generation/Debugging & Throughout & +++ \\
     \bottomrule
   \end{tabularx}
 \end{center}
