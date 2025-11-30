@@ -51,9 +51,9 @@ def plot_confusion_matrices_row(models_dict, y_test, class_names=['Uninjured', '
             ax.set_yticks([])  # Optional: Hide y-ticks for subsequent plots for cleaner look
 
     plt.tight_layout()
+    plt.savefig('images/confusion_matrices_row.pdf', bbox_inches='tight')
     plt.show()
 
-    print("To save: plt.savefig('images/confusion_matrices_row.pdf', bbox_inches='tight')")
 
 
 def plot_precision_recall_row(models_proba_dict, y_test, class_names=['Uninjured', 'Injured', 'Severe']):
@@ -135,5 +135,5 @@ def plot_precision_recall_row(models_proba_dict, y_test, class_names=['Uninjured
         ax.grid(True, alpha=0.3, linewidth=1.5)
 
     plt.tight_layout()
+    plt.savefig('images/precision_recall_row.pdf', bbox_inches='tight')
     plt.show()
-    print("To save: plt.savefig('images/precision_recall_row.pdf', bbox_inches='tight')")
