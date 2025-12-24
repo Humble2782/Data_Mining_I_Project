@@ -56,7 +56,6 @@ def get_impact_score(vehicle_type):
 
 
 # --- 4. Session State & Scenario Management ---
-# Initialize session state for all widgets if not present
 def init_session_state():
     defaults = {
         'lighting_ordinal': 0, 'weather_ordinal': 0, 'surface_quality_indicator': 0,
@@ -76,7 +75,8 @@ init_session_state()
 # Helper to load scenarios
 def load_scenario(type="normal"):
     if type == "high_risk":
-        # Critical Situation: Elderly cyclist vs Truck at night/ice
+        # Critical Situation: Elderly cyclist vs Truck at night
+        # High Fatality Probability
         st.session_state['lighting_ordinal'] = 3  # Night Unlit
         st.session_state['weather_ordinal'] = 4  # Fog/Snow
         st.session_state['surface_quality_indicator'] = 2  # Ice
@@ -86,59 +86,64 @@ def load_scenario(type="normal"):
 
         st.session_state['role'] = 0  # Driver
         st.session_state['sex'] = 1  # Male
-        st.session_state['age'] = 82  # Elderly (High Risk)
-        st.session_state['used_belt'] = False  # No Belt
-        st.session_state['used_airbag'] = False  # No Airbag
+        st.session_state['age'] = 82  # Elderly
+        st.session_state['used_belt'] = False  # No protection
+        st.session_state['used_airbag'] = True
 
-        st.session_state['speed_limit'] = 110
+        st.session_state['speed_limit'] = 90  # Country road speed
         st.session_state['road_complexity_index'] = 8.0
         st.session_state['reserved_lane_present'] = False
 
-        st.session_state['my_vehicle'] = "Bicycle / Scooter"  # Vulnerable
-        st.session_state['other_vehicle'] = "Heavy Truck / Bus"  # Dangerous obstacle
+        st.session_state['my_vehicle'] = "Bicycle / Scooter"
+        st.session_state['other_vehicle'] = "Heavy Truck / Bus"
 
     elif type == "medium_risk":
-        # Medium Risk: Middle-aged motorcyclist vs Truck in rain
-        st.session_state['lighting_ordinal'] = 2  # Night (Lit)
-        st.session_state['weather_ordinal'] = 2  # Heavy Rain/Wind
+        # Medium Risk: Car vs Truck (High Hospitalization, lower Fatality than bike)
+        # Situation: Country road, head-on or side impact with larger vehicle
+        st.session_state['lighting_ordinal'] = 0  # Daylight
+        st.session_state['weather_ordinal'] = 1  # Light Rain
         st.session_state['surface_quality_indicator'] = 1  # Wet
-        st.session_state['time_of_day'] = 3  # Night
-        st.session_state['hour_val'] = 22  # 10 PM
+        st.session_state['time_of_day'] = 2  # Evening Rush
+        st.session_state['hour_val'] = 18  # 6 PM
         st.session_state['day_sel'] = 4  # Friday
 
         st.session_state['role'] = 0  # Driver
         st.session_state['sex'] = 1  # Male
-        st.session_state['age'] = 55  # Middle Aged (Higher vulnerability than 21)
-        st.session_state['used_belt'] = True  # Helmet/Belt assumed
-        st.session_state['used_airbag'] = False  # Moto often has no airbag
+        st.session_state['age'] = 45  # Adult
+        st.session_state['used_belt'] = True  # Belted
+        st.session_state['used_airbag'] = True  # Airbag works
 
-        st.session_state['speed_limit'] = 90
+        st.session_state['speed_limit'] = 80  # Country road
         st.session_state['road_complexity_index'] = 6.0
         st.session_state['reserved_lane_present'] = False
 
-        st.session_state['my_vehicle'] = "Motorcycle"
-        st.session_state['other_vehicle'] = "Heavy Truck / Bus"  # Increased delta vs Car
+        st.session_state['my_vehicle'] = "Passenger Car"  # Impact Score 4
+        st.session_state['other_vehicle'] = "Heavy Truck / Bus"  # Impact Score 6 -> Delta -2 (Dangerous)
 
-    else:  # Reset to Normal
-        # Safe Situation: Standard car commute
+    else:  # Normal (Low Risk)
+        # Safe Situation: Truck Driver in Zone 30 vs Bicycle
+        # Maximum safety for the driver
         st.session_state['lighting_ordinal'] = 0
         st.session_state['weather_ordinal'] = 0
         st.session_state['surface_quality_indicator'] = 0
         st.session_state['time_of_day'] = 1
-        st.session_state['hour_val'] = 14
-        st.session_state['day_sel'] = 2
+        st.session_state['hour_val'] = 12
+        st.session_state['day_sel'] = 1
         st.session_state['role'] = 0
-        st.session_state['sex'] = 1
-        st.session_state['age'] = 30  # Slightly younger
+        st.session_state['sex'] = 0
+        st.session_state['age'] = 30
         st.session_state['used_belt'] = True
-        st.session_state['used_airbag'] = True
-        st.session_state['speed_limit'] = 30  # Reduced to 30 km/h to ensure Low Risk
-        st.session_state['road_complexity_index'] = 0.0  # Reduced complexity to minimum
-        st.session_state['my_vehicle'] = "Passenger Car"
-        st.session_state['other_vehicle'] = "Bicycle / Scooter"  # Colliding with lighter vehicle = safer for driver
+        st.session_state['used_airbag'] = False
+        st.session_state['speed_limit'] = 30  # Minimum speed
+        st.session_state['road_complexity_index'] = 0.0  # Simple road
+
+        # KEY CHANGE: Truck vs Bicycle.
+        st.session_state['my_vehicle'] = "Heavy Truck / Bus"
+        st.session_state['other_vehicle'] = "Bicycle / Scooter"
+
+    # --- 5. Header & Controls ---
 
 
-# --- 5. Header & Controls ---
 st.title("🚑 eCall AI - Injury Severity Prediction")
 st.markdown("""
 This dashboard predicts the severity of injuries in traffic accidents using a machine learning model.
@@ -156,7 +161,6 @@ features = metadata['feature_names']
 cat_features = metadata['cat_features']
 
 # Scenario Buttons
-# Adjusted columns to [1, 1, 1, 5] to fit 3 buttons tightly
 sc_col1, sc_col2, sc_col3, _ = st.columns([1, 1, 1, 5])
 with sc_col1:
     if st.button("🛡️ Normal Scenario", use_container_width=True):
@@ -255,9 +259,11 @@ with st.form("prediction_form"):
         my_vehicle = st.selectbox("My Vehicle",
                                   ["Passenger Car", "Heavy Truck / Bus", "Motorcycle", "Bicycle / Scooter"],
                                   key='my_vehicle')
+
+        # Added "Bicycle / Scooter" to this list to enable the new Normal Scenario
         other_vehicle = st.selectbox("Other Vehicle",
-                                     ["Passenger Car", "Heavy Truck / Bus", "Motorcycle", "Pedestrian", "Unknown"],
-                                     key='other_vehicle')
+                                     ["Passenger Car", "Heavy Truck / Bus", "Motorcycle", "Bicycle / Scooter",
+                                      "Pedestrian", "Unknown"], key='other_vehicle')
 
         score_me = get_impact_score(my_vehicle)
         score_other = get_impact_score(other_vehicle)
@@ -309,14 +315,13 @@ if submit_btn:
                 'value': [p_fatal, 1 - p_fatal]
             })
 
-            # --- ADJUSTED THRESHOLDS for Imbalanced Data ---
-            # Fatalities are rare events (<1% base rate).
-            # Thresholds are tuned to detect relative risk increases.
-
-            if p_fatal > 0.08:
+            # --- UPDATED MAPPING LOGIC ---
+            # High Risk: Fatal Probability > 5% (Very dangerous)
+            if p_fatal > 0.05:
                 risk_color = '#F44336'  # RED
                 risk_label = "HIGH RISK"
-            elif p_fatal > 0.02 or p_hosp > 0.30:
+            # Medium Risk: Fatal > 1% OR Hospitalized > 15% (Injuries likely)
+            elif p_fatal > 0.01 or p_hosp > 0.15:
                 risk_color = '#FFC107'  # YELLOW
                 risk_label = "MEDIUM RISK"
             else:
@@ -327,7 +332,6 @@ if submit_btn:
                 theta=alt.Theta("value", stack=True)
             )
 
-            # We fix the width/height to ensure it remains a circle (not stretched)
             pie = base.mark_arc(outerRadius=100, innerRadius=70).encode(
                 color=alt.Color("category",
                                 scale=alt.Scale(domain=['Severe Risk', 'Safe'], range=[risk_color, '#e0e0e0']),
@@ -339,13 +343,12 @@ if submit_btn:
                 text=alt.value(f"{p_fatal:.1%}")
             ).properties(width=250, height=250)
 
-            # Display WITHOUT use_container_width to keep aspect ratio
-            # Use nested columns to center the chart horizontally
+            # Use nested columns to center the chart
             sub_col_l, sub_col_m, sub_col_r = st.columns([1, 2, 1])
             with sub_col_m:
                 st.altair_chart(pie + text, use_container_width=False)
 
-            # Text Summary with Calibrated Thresholds
+            # Text Summary
             if risk_label == "HIGH RISK":
                 st.error("🔴 **HIGH RISK**\n\nPotential Fatality or Severe Injury.")
             elif risk_label == "MEDIUM RISK":
@@ -362,22 +365,18 @@ if submit_btn:
                 'Probability': [p_safe, p_hosp, p_fatal]
             })
 
-            # Define sorting order explicitly
             sort_order = ['Uninjured/Light', 'Hospitalized', 'Fatal']
 
-            # Base chart
             bar_chart = alt.Chart(chart_data).mark_bar(cornerRadius=5, height=40).encode(
                 x=alt.X('Probability', axis=alt.Axis(format='%', title='')),
                 y=alt.Y('Outcome', sort=sort_order, title=''),
-                # Explicitly map colors to categories
                 color=alt.Color('Outcome', scale=alt.Scale(
                     domain=['Uninjured/Light', 'Hospitalized', 'Fatal'],
                     range=['#4CAF50', '#FFC107', '#F44336']
                 ), legend=None),
                 tooltip=['Outcome', alt.Tooltip('Probability', format='.1%')]
-            ).properties(height=220)  # Added explicit height to fix layout
+            ).properties(height=220)
 
-            # Text labels ON the bars
             text_chart = bar_chart.mark_text(
                 align='left',
                 baseline='middle',
@@ -391,7 +390,6 @@ if submit_btn:
 
             # --- 3. RISK FACTORS BREAKDOWN ---
             st.markdown("##### 🔍 Contextual Risk Factors")
-            # Normalize inputs to 0-1 scale for visualization
             factors = pd.DataFrame({
                 'Factor': ['Speed Limit', 'Road Complexity', 'Weather Severity', 'Lighting Conditions'],
                 'Intensity': [
@@ -406,7 +404,7 @@ if submit_btn:
                 x=alt.X('Intensity', scale=alt.Scale(domain=[0, 1]), title="Relative Intensity (0=Low, 1=Max)"),
                 y=alt.Y('Factor', sort=None),
                 tooltip=['Factor', alt.Tooltip('Intensity', format='.2f')]
-            ).properties(height=200)  # Added explicit height to fix layout
+            ).properties(height=200)
 
             st.altair_chart(factor_chart, use_container_width=True)
 
