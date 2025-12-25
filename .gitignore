@@ -514,6 +514,10 @@ pyrightconfig.json
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,jupyternotebooks,latex
 data/train_val_data.csv
 data/test_data.csv.zip
+
+
+exportToHTML
+documents/dashboard_app.pdf
+documents/dashboard_app.tex
