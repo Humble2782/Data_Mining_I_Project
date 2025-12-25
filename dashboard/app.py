@@ -25,7 +25,7 @@ def load_model_assets():
         base_dir = os.path.dirname(os.path.abspath(__file__))
 
         # Define paths
-        zip_path = os.path.join(base_dir, 'catboost_model.zip')
+        zip_path = os.path.join(base_dir, 'catboost_model.pkl.zip')
         model_path = os.path.join(base_dir, 'catboost_model.pkl')
         meta_path = os.path.join(base_dir, 'model_metadata.json')
 
