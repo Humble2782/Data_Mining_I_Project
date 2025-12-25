@@ -6,6 +6,9 @@ import numpy as np
 import math
 import os
 import altair as alt
+import math
+import os
+import zipfile
 
 # --- 1. Page Configuration ---
 st.set_page_config(
@@ -20,8 +23,19 @@ st.set_page_config(
 def load_model_assets():
     try:
         base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Define paths
+        zip_path = os.path.join(base_dir, 'catboost_model.zip')
         model_path = os.path.join(base_dir, 'catboost_model.pkl')
         meta_path = os.path.join(base_dir, 'model_metadata.json')
+
+        # --- Unzip logic for Render.com ---
+        # If the model.pkl is missing but the zip exists, extract it.
+        if not os.path.exists(model_path) and os.path.exists(zip_path):
+            print("📦 Found zip file. Extracting model...")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(base_dir)
+            print("✅ Extraction complete.")
 
         model = joblib.load(model_path)
         with open(meta_path, 'r') as f:

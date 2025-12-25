@@ -521,3 +521,4 @@ data/test_data.csv.zip
 exportToHTML
 documents/dashboard_app.pdf
 documents/dashboard_app.tex
+dashboard/catboost_model.pkl
