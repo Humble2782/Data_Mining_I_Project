@@ -104,19 +104,19 @@ def load_scenario(type="normal"):
         st.session_state['used_belt'] = False  # No protection
         st.session_state['used_airbag'] = True
 
-        st.session_state['speed_limit'] = 90  # Country road speed
-        st.session_state['road_complexity_index'] = 8.0
+        st.session_state['speed_limit'] = 110  # Highway
+        st.session_state['road_complexity_index'] = 5.0
         st.session_state['reserved_lane_present'] = False
 
-        st.session_state['my_vehicle'] = "Bicycle / Scooter"
+        st.session_state['my_vehicle'] = "Pessenger Car"
         st.session_state['other_vehicle'] = "Heavy Truck / Bus"
 
     elif type == "medium_risk":
         # Medium Risk: Car vs Truck (High Hospitalization, lower Fatality than bike)
         # Situation: Country road, head-on or side impact with larger vehicle
-        st.session_state['lighting_ordinal'] = 0  # Daylight
-        st.session_state['weather_ordinal'] = 1  # Light Rain
-        st.session_state['surface_quality_indicator'] = 1  # Wet
+        st.session_state['lighting_ordinal'] = 2  # Night (Lit)
+        st.session_state['weather_ordinal'] = 0  # Normal
+        st.session_state['surface_quality_indicator'] = 0  # Normal
         st.session_state['time_of_day'] = 2  # Evening Rush
         st.session_state['hour_val'] = 18  # 6 PM
         st.session_state['day_sel'] = 4  # Friday
@@ -125,14 +125,14 @@ def load_scenario(type="normal"):
         st.session_state['sex'] = 1  # Male
         st.session_state['age'] = 45  # Adult
         st.session_state['used_belt'] = True  # Belted
-        st.session_state['used_airbag'] = True  # Airbag works
+        st.session_state['used_airbag'] = False # No airbag
 
-        st.session_state['speed_limit'] = 80  # Country road
-        st.session_state['road_complexity_index'] = 6.0
+        st.session_state['speed_limit'] = 50  # Country road
+        st.session_state['road_complexity_index'] = 1.5
         st.session_state['reserved_lane_present'] = False
 
         st.session_state['my_vehicle'] = "Passenger Car"  # Impact Score 4
-        st.session_state['other_vehicle'] = "Heavy Truck / Bus"  # Impact Score 6 -> Delta -2 (Dangerous)
+        st.session_state['other_vehicle'] = "Passenger Car"
 
     else:  # Normal (Low Risk)
         # Safe Situation: Truck Driver in Zone 30 vs Bicycle
@@ -142,18 +142,18 @@ def load_scenario(type="normal"):
         st.session_state['surface_quality_indicator'] = 0
         st.session_state['time_of_day'] = 1
         st.session_state['hour_val'] = 12
-        st.session_state['day_sel'] = 1
+        st.session_state['day_sel'] = 6 # Sunday
         st.session_state['role'] = 0
         st.session_state['sex'] = 0
         st.session_state['age'] = 30
         st.session_state['used_belt'] = True
         st.session_state['used_airbag'] = False
-        st.session_state['speed_limit'] = 30  # Minimum speed
+        st.session_state['speed_limit'] = 50
         st.session_state['road_complexity_index'] = 0.0  # Simple road
 
         # KEY CHANGE: Truck vs Bicycle.
-        st.session_state['my_vehicle'] = "Heavy Truck / Bus"
-        st.session_state['other_vehicle'] = "Bicycle / Scooter"
+        st.session_state['my_vehicle'] = "Passenger Car"
+        st.session_state['other_vehicle'] = "Pedestrian"
 
     # --- 5. Header & Controls ---
 
@@ -312,6 +312,14 @@ if submit_btn:
         probs = model.predict_proba(input_df)[0]
         p_safe, p_hosp, p_fatal = probs[0], probs[1], probs[2]
 
+        # --- NEW LOGIC: Highest Chance Prediction ---
+        # Find the category with the highest probability
+        max_idx = np.argmax(probs)
+
+        # --- NEW LOGIC: Official Mean (Expected Severity) ---
+        # Classes: 0 (Uninjured), 1 (Injured), 2 (Severe)
+        mean_severity = (0 * p_safe) + (1 * p_hosp) + (2 * p_fatal)
+
         # --- RESULTS SECTION ---
         st.divider()
         st.subheader("📊 Analysis Results")
@@ -320,27 +328,30 @@ if submit_btn:
         res_col1, res_col2 = st.columns([1, 2])
 
         with res_col1:
-            # --- 1. SEVERITY GAUGE (Donut Chart) ---
-            st.markdown("##### Severe Injury Risk")
+            st.markdown("##### Mean Severity Score")
 
-            # Data for Gauge
-            gauge_data = pd.DataFrame({
-                'category': ['Severe Risk', 'Safe'],
-                'value': [p_fatal, 1 - p_fatal]
-            })
-
-            # --- UPDATED MAPPING LOGIC ---
-            # High Risk: Fatal Probability > 5% (Very dangerous)
-            if p_fatal > 0.05:
+            # Determine Colors & Label based on Highest Probability (max_idx)
+            if max_idx == 2:  # Severe/Fatal is highest
                 risk_color = '#F44336'  # RED
                 risk_label = "HIGH RISK"
-            # Medium Risk: Fatal > 1% OR Hospitalized > 15% (Injuries likely)
-            elif p_fatal > 0.01 or p_hosp > 0.15:
+                prediction_text = "Severe Injury"
+            elif max_idx == 1:  # Hospitalized/Light is highest
                 risk_color = '#FFC107'  # YELLOW
                 risk_label = "MEDIUM RISK"
-            else:
+                prediction_text = "Injured"
+            else:  # Safe is highest
                 risk_color = '#4CAF50'  # GREEN
                 risk_label = "LOW RISK"
+                prediction_text = "Uninjured"
+
+            # Gauge Data: We simply visualize the Mean Severity scaled to 100% (Mean / 2.0)
+            # This allows the gauge to reflect the "official mean" visually.
+            gauge_val = mean_severity / 2.0
+
+            gauge_data = pd.DataFrame({
+                'category': ['Severity', 'Safe'],
+                'value': [gauge_val, 1 - gauge_val]
+            })
 
             base = alt.Chart(gauge_data).encode(
                 theta=alt.Theta("value", stack=True)
@@ -348,44 +359,50 @@ if submit_btn:
 
             pie = base.mark_arc(outerRadius=100, innerRadius=70).encode(
                 color=alt.Color("category",
-                                scale=alt.Scale(domain=['Severe Risk', 'Safe'], range=[risk_color, '#e0e0e0']),
+                                scale=alt.Scale(domain=['Severity', 'Safe'], range=[risk_color, '#e0e0e0']),
                                 legend=None),
                 tooltip=["category", alt.Tooltip("value", format=".1%")]
             ).properties(width=250, height=250)
 
+            # Display the Mean Severity Score in the center
             text = base.mark_text(radius=0, size=24, color=risk_color, fontStyle="bold").encode(
-                text=alt.value(f"{p_fatal:.1%}")
+                text=alt.value(f"{mean_severity:.2f}")
+            ).properties(width=250, height=250)
+
+            # Label for the score
+            text_label = base.mark_text(radius=0, dy=20, size=12, color="gray").encode(
+                text=alt.value("Index (0-2)")
             ).properties(width=250, height=250)
 
             # Use nested columns to center the chart
             sub_col_l, sub_col_m, sub_col_r = st.columns([1, 2, 1])
             with sub_col_m:
-                st.altair_chart(pie + text, use_container_width=False)
+                st.altair_chart(pie + text + text_label, use_container_width=False)
 
             # Text Summary
             if risk_label == "HIGH RISK":
-                st.error("🔴 **HIGH RISK**\n\nPotential Fatality or Severe Injury.")
+                st.error(f"🔴 **HIGH RISK**\n\nPrediction: **{prediction_text}**")
             elif risk_label == "MEDIUM RISK":
-                st.warning("🟡 **MEDIUM RISK**\n\nHospitalization Likely.")
+                st.warning(f"🟡 **MEDIUM RISK**\n\nPrediction: **{prediction_text}**")
             else:
-                st.success("🟢 **LOW RISK**\n\nLikely Minor Injuries.")
+                st.success(f"🟢 **LOW RISK**\n\nPrediction: **{prediction_text}**")
 
         with res_col2:
             # --- 2. HORIZONTAL PROBABILITY BAR ---
             st.markdown("##### Prediction Probabilities")
 
             chart_data = pd.DataFrame({
-                'Outcome': ['Uninjured/Light', 'Hospitalized', 'Fatal'],
+                'Outcome': ['Uninjured', 'Injured', 'Severe/Fatal'],
                 'Probability': [p_safe, p_hosp, p_fatal]
             })
 
-            sort_order = ['Uninjured/Light', 'Hospitalized', 'Fatal']
+            sort_order = ['Uninjured', 'Injured', 'Severe/Fatal']
 
             bar_chart = alt.Chart(chart_data).mark_bar(cornerRadius=5, height=40).encode(
                 x=alt.X('Probability', axis=alt.Axis(format='%', title='')),
                 y=alt.Y('Outcome', sort=sort_order, title=''),
                 color=alt.Color('Outcome', scale=alt.Scale(
-                    domain=['Uninjured/Light', 'Hospitalized', 'Fatal'],
+                    domain=['Uninjured', 'Injured', 'Severe/Fatal'],
                     range=['#4CAF50', '#FFC107', '#F44336']
                 ), legend=None),
                 tooltip=['Outcome', alt.Tooltip('Probability', format='.1%')]
