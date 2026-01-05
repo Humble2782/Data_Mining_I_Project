@@ -12,7 +12,7 @@ Current eCall systems transmit location and passenger count but lack injury seve
 [Project Presentation](https://www.google.com/search?q=https://raw.githubusercontent.com/Humble2782/Data_Mining_I_Project/main/documents/Project%2520Presentation.pdf)
 
 **View live demo:** \
-[eCall Real-Time Prediction Dashboard](ecall.gabrielhimmelein.com) (hosted by [@gabegagster](https://github.com/gabegagster))
+[eCall Real-Time Prediction Dashboard](https://ecall.gabrielhimmelein.com) (hosted by [@gabegagster](https://github.com/gabegagster))
 
 
 ## 🏗️ Repository Structure
