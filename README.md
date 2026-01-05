@@ -1,10 +1,5 @@
-
-
 # Predicting Injury Severity in Road Accidents
-
-
-### A Real-Time Classification Approach (Data Mining I Project)
-
+### A Real-Time Classification Approach
 
 ## 📖 Overview
 
@@ -16,8 +11,8 @@ Current eCall systems transmit location and passenger count but lack injury seve
 [Project Report](https://www.google.com/search?q=https://raw.githubusercontent.com/Humble2782/Data_Mining_I_Project/main/documents/project_report.pdf) \
 [Project Presentation](https://www.google.com/search?q=https://raw.githubusercontent.com/Humble2782/Data_Mining_I_Project/main/documents/Project%2520Presentation.pdf)
 
-**View live demo:** (hosted by @gabegagster)\
-[eCall Real-Time Prediction Dashboard](ecall.gabrielhimmelein.com)
+**View live demo:** \
+[eCall Real-Time Prediction Dashboard](ecall.gabrielhimmelein.com) (hosted by [@gabegagster](https://github.com/gabegagster))
 
 
 ## 🏗️ Repository Structure
@@ -156,20 +151,18 @@ We evaluated three distinct architectures against a speed-limit baseline:
 
 This project is built to run as a **dashboard application**.
 
-\
 **Clone the repository:**
 ```
-git clone https://github.com/Humble2782/Data_Mining_I_Project)
+git clone https://github.com/Humble2782/Data_Mining_I_Project
 ```
-\
+
 **Install the dependencies:**\
 Navigate to the dashboard folder and run the application. Dependencies should be installed from this directory.
 ```
 cd Data_Mining_I_Project/dashboard
-# Install dependencies
 pip install -r requirements.txt
 ```
-\
+
 **Run the application:**
 ```
 streamlit run app.py
@@ -178,13 +171,13 @@ streamlit run app.py
 
 ## 👥 Authors
 
-
-
-* **David Cebulla** (dcebulla@mail.uni-mannheim.de)
-* **Gabriel Himmelein** (ghimmele@mail.uni-mannheim.de): [Website](https://gabrielhimmelein.com/)
-* **Lukas Ott** (lott@mail.uni-mannheim.de)
-* **Artur Loreit** (arloreit@mail.uni-mannheim.de)
-* **Aaron Niemesch** (aniemesc@mail.uni-mannheim.de)
+| Team Member | Role | Responsibilities |
+| :--- | :--- | :--- |
+| **[Gabriel Himmelein](https://gabrielhimmelein.com/)** | **Technical Lead** | • Preprocessing pipeline architecture<br>• Deployment & Streamlit dashboard<br>• System integration |
+| **[David Cebulla](https://github.com/Humble2782)** | **ML Engineer** | • Data integration (merging)<br>• Model training |
+| **[Lukas Ott](https://github.com/lukasmichaelott)** | **Data Engineer** | • Handling missing data (imputation)<br>• Clustering analysis |
+| **[Aaron Niemesch](https://github.com/AroNiem)** | **ML Engineer** | • Model training<br>• Project reporting & documentation |
+| **[Artur Loreit](https://github.com/ALoreit)** | **Data Analyst** | • Use case definition<br>• Exploratory Data Analysis (EDA)<br>• Project presentation |
 
 *Submitted to the **Data and Web Science Group** at the University of Mannheim.*
 
