@@ -522,3 +522,6 @@ exportToHTML
 documents/dashboard_app.pdf
 documents/dashboard_app.tex
 dashboard/catboost_model.pkl
+documents/.DS_Store
+.gitignore
+.DS_Store
