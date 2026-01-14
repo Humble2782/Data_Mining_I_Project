@@ -174,7 +174,7 @@ streamlit run app.py
 | Team Member | Role | Responsibilities |
 | :--- | :--- | :--- |
 | **[Gabriel Himmelein](https://gabrielhimmelein.com/)** | **Technical Lead** | • Preprocessing pipeline architecture<br>• Deployment & Streamlit dashboard<br>• Project coordination |
-| **[David Cebulla](https://github.com/Humble2782)** | **ML Engineer** | • Data integration (merging)<br>• Model training |
+| **[David Cebulla](https://github.com/Humble2782)** | **Lead ML Engineer** | • Data integration (merging)<br>• Lead model training |
 | **[Lukas Ott](https://github.com/lukasmichaelott)** | **Data Engineer** | • Handling missing data (imputation)<br>• Clustering analysis |
 | **[Aaron Niemesch](https://github.com/AroNiem)** | **ML Engineer** | • Model training<br>• Project reporting & documentation |
 | **[Artur Loreit](https://github.com/ALoreit)** | **Data Analyst** | • Use case definition<br>• Exploratory Data Analysis (EDA)<br>• Project presentation |
