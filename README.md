@@ -8,8 +8,8 @@ This project was developed by students at the **University of Mannheim** as part
 Current eCall systems transmit location and passenger count but lack injury severity data: a critical gap for emergency triage. Using historical data from the **French National Interministerial Observatory for Road Safety (ONISR)**, we developed a pipeline to classify accidents into three severity levels: *Uninjured*, *Lightly Injured*, and *Severe (Hospitalized/Dead)* based solely on real-time variables.
 
 **Read the full detailed analysis:** \
-[Project Report](https://raw.githubusercontent.com/Humble2782/Data_Mining_I_Project/main/documents/project_report.pdf) \
-[Project Presentation](https://raw.githubusercontent.com/Humble2782/Data_Mining_I_Project/main/documents/Project%20Presentation.pdf)
+[Project Report](https://raw.githubusercontent.com/Humble2782/ecall-severity-predictor/main/documents/project_report.pdf) \
+[Project Presentation](https://raw.githubusercontent.com/Humble2782/ecall-severity-predictor/main/documents/Project%20Presentation.pdf)
 
 **View live demo:** \
 [eCall Real-Time Prediction Dashboard](https://ecall.gabrielhimmelein.com) (hosted by [@gabegagster](https://github.com/gabegagster))
